@@ -150,14 +150,9 @@
 #' \item{lambda.w}{Tuning parameter for the weight function.}
 #'
 #' @examples
-#' \dontrun{
-#' # Using the "simdata" data available in the package.
-#' fit.model <- NSconvo_fit( coords = simdata$sim.locations,
-#' data = simdata$sim.data, cov.model = "exponential", fit.radius = 2.3,
-#' mc.locations = simdata$mc.locations, lambda.w = 2,
-#' mean.model = (simdata$sim.data ~ simdata$sim.locations[,1]
-#' + simdata$sim.locations[,2]) )
-#' }
+#' # Using white noise data
+#' fit.model <- NSconvo_fit( coords = cbind( runif(300), runif(300)),
+#' data = rnorm(300), fit.radius = 0.4, N.mc = 4 )
 #'
 #' @export
 #' @importFrom geoR cov.spatial
@@ -179,7 +174,8 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   if( cov.model != "cauchy" & cov.model != "matern" & cov.model != "circular" &
         cov.model != "cubic" & cov.model != "gaussian" & cov.model != "exponential" &
         cov.model != "spherical" & cov.model != "wave" ){
-    print("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian, exponential, spherical, or wave).")
+    print("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian,
+          exponential, spherical, or wave).")
   }
 
   #===========================================================================
@@ -223,7 +219,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   #===========================================================================
   OLS.model <- lm( mean.model, x=TRUE )
 
-  Xmat <<- matrix( unname( OLS.model$x ), nrow=N )
+  Xmat <- matrix( unname( OLS.model$x ), nrow=N )
 
   #===========================================================================
   # Specify lower, upper, and initial parameter values for optim()
@@ -343,8 +339,6 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     mc.kernels <- array(NA, dim=c(2,2,K))
     MLEs.save <- matrix(NA,K,7)
 
-    covmodel <<- cov.model
-
     # Estimate the kernel function for each mixture component location,
     # completely specified by the kernel covariance matrix
     for( k in 1:K ){
@@ -363,14 +357,14 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
         distances[i] <- sqrt(sum((temp.locs[i,] - mc.locations[k,])^2))
       }
 
-      temp.locations <<- temp.locs[distances <= fit.radius,]
-      Xtemp <<- X.tem[distances <= fit.radius,]
+      temp.locations <- temp.locs[distances <= fit.radius,]
+      Xtemp <- X.tem[distances <= fit.radius,]
       n.fit <- dim(temp.locations)[1]
       temp.dat <- as.matrix( temp.dat, nrow=n.fit)
       temp.data <- temp.dat[distances <= fit.radius,]
-      temp.data <<- as.matrix(temp.data, nrow=n.fit)
+      temp.data <- as.matrix(temp.data, nrow=n.fit)
 
-      print(paste("Estimating the parameter set for mixture component location ", k," using ",
+      print(paste("Calculating the mixture component parameter set for location ", k," using ",
                   n.fit," observations.", sep=""))
 
       # Covariance models with the kappa parameter
@@ -378,9 +372,14 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
 
         # Calculate a locally anisotropic covariance
         # Parameter order is lam1, lam2, eta, tausq, sigmasq, kappa
+        anis.model.kappa <- make_aniso_loglik_kappa( locations = temp.locations,
+                                                     cov.model = cov.model,
+                                                     data = temp.data,
+                                                     Xmat = Xtemp )
+
         MLEs <- optim( c(lam1.init, lam2.init, pi/4, tausq.local.init,
                          sigmasq.local.init, kappa.local.init ),
-                       anis_model_kappa,
+                       anis.model.kappa,
                        method = "L-BFGS-B",
                        lower=c( lam1.LB, lam2.LB, 0, tausq.local.LB, sigmasq.local.LB ),
                        upper=c( lam1.UB, lam2.UB, pi/2,
@@ -393,12 +392,16 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
       # Covariance models without the kappa parameter
       if( cov.model != "matern" & cov.model != "cauchy" ){
 
-        KAPPA <<- NULL
         # Calculate a locally anisotropic covariance
         # Parameter order is lam1, lam2, eta, tausq, sigmasq
+        anis.model <- make_aniso_loglik( locations = temp.locations,
+                                         cov.model = cov.model,
+                                         data = temp.data,
+                                         Xmat = Xtemp )
+
         MLEs <- optim( c( lam1.init, lam2.init, pi/4, tausq.local.init,
                           sigmasq.local.init ),
-                       anis_model,
+                       anis.model,
                        method = "L-BFGS-B",
                        lower=c( lam1.LB, lam2.LB, 0, tausq.local.LB, sigmasq.local.LB ),
                        upper=c( lam1.UB, lam2.UB, pi/2,
@@ -472,6 +475,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   # First, for models without kappa.
   if( cov.model != "matern" & cov.model != "cauchy" ){
 
+    KAPPA <- NULL
     #====================================
     # Calculate the correlation matrix
 
@@ -515,19 +519,20 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
 
     #====================================
     # Global parameter estimation
-    fit.data <<- data
 
     if( ns.nugget == FALSE & ns.variance == FALSE ){
       print("Calculating the variance parameter MLEs")
 
-      Corr <<- NS.corr
       Corr.decomp <- eigen(NS.corr)
 
-      Dmat <<- diag(Corr.decomp$values)
-      Vmat <<- Corr.decomp$vectors
+      Dmat <- diag(Corr.decomp$values)
+      Vmat <- Corr.decomp$vectors
+
+      overall.lik1 <- make_global_loglik1( data = data, Xmat = Xmat,
+                                           Dmat = Dmat, Vmat = Vmat )
 
       overall.MLEs <- optim( c( tausq.global.init, sigmasq.global.init ),
-                             overall_lik1,
+                             overall.lik1,
                              method = "L-BFGS-B",
                              lower=c( tausq.global.LB, sigmasq.global.LB ),
                              upper=c( tausq.global.UB, sigmasq.global.UB ) )
@@ -548,9 +553,12 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     if( ns.nugget == TRUE & ns.variance == FALSE ){
       print("Calculating the variance parameter MLEs")
 
-      Corr <<- NS.corr
-      fit.nuggets <<- obs.nuggets
-      overall.MLEs <- optim( sigmasq.global.init, overall_lik2, method = "L-BFGS-B",
+      overall.lik2 <- make_global_loglik2( data = data,
+                                           Xmat = Xmat,
+                                           Corr = NS.corr,
+                                           obs.nuggets = obs.nuggets )
+
+      overall.MLEs <- optim( sigmasq.global.init, overall.lik2, method = "L-BFGS-B",
                              lower=c( sigmasq.global.LB ),
                              upper=c( sigmasq.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
@@ -569,11 +577,15 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     if( ns.nugget == FALSE & ns.variance == TRUE ){
       print("Calculating the variance parameter MLEs")
 
-      Corr <<- NS.corr
-      fit.variance <<- obs.variance
-      overall.MLEs <- optim( tausq.global.init, overall_lik3, method = "L-BFGS-B",
+      overall.lik3 <- make_global_loglik3( data = data,
+                                           Xmat = Xmat,
+                                           Corr = NS.corr,
+                                           obs.variance = obs.variance )
+
+      overall.MLEs <- optim( tausq.global.init, overall.lik3, method = "L-BFGS-B",
                              lower=c( tausq.global.LB ),
                              upper=c( tausq.global.UB ) )
+
       if( overall.MLEs$convergence != 0 ){
         print( paste("There was an error with optim(): ", overall.MLEs$message) )
       }
@@ -640,15 +652,17 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
 
     #====================================
     # Global parameter estimation
-    Scalemat <<- Scale.mat
-    Distmat <<- Dist.mat
-    fit.data <<- data
 
     if( ns.nugget == FALSE & ns.variance == FALSE ){
       print("Calculating the variance and smoothness parameter MLEs")
 
+      overall.lik1.kappa <- make_global_loglik1_kappa( data = data, Xmat = Xmat,
+                                                       cov.model = cov.model,
+                                                       Scalemat = Scale.mat,
+                                                       Distmat = Dist.mat )
+
       overall.MLEs <- optim(c( tausq.global.init, sigmasq.global.init, kappa.global.init ),
-                            overall_lik1_kappa,
+                            overall.lik1.kappa,
                             method = "L-BFGS-B",
                             lower=c( tausq.global.LB, sigmasq.global.LB, kappa.global.LB ),
                             upper=c( tausq.global.UB, sigmasq.global.UB, kappa.global.UB ) )
@@ -669,9 +683,14 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     if( ns.nugget == TRUE & ns.variance == FALSE ){
       print("Calculating the variance and smoothness parameter MLEs")
 
-      fit.nuggets <<- obs.nuggets
+      overall.lik2.kappa <- make_global_loglik2_kappa( data = data, Xmat = Xmat,
+                                                       cov.model = cov.model,
+                                                       Scalemat = Scale.mat,
+                                                       Distmat = Dist.mat,
+                                                       obs.nuggets = obs.nuggets )
+
       overall.MLEs <- optim(c( sigmasq.global.init, kappa.global.init ),
-                            overall_lik2_kappa,
+                            overall.lik2.kappa,
                             method = "L-BFGS-B",
                             lower=c( sigmasq.global.LB, kappa.global.LB ),
                             upper=c( sigmasq.global.UB, kappa.global.UB ) )
@@ -693,9 +712,14 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     if( ns.nugget == FALSE & ns.variance == TRUE ){
       print("Calculating the variance and smoothness parameter MLEs")
 
-      fit.variance <<- obs.variance
+      overall.lik3.kappa <- make_global_loglik3_kappa( data = data, Xmat = Xmat,
+                                                       cov.model = cov.model,
+                                                       Scalemat = Scale.mat,
+                                                       Distmat = Dist.mat,
+                                                       obs.variance = obs.variance )
+
       overall.MLEs <- optim(c( tausq.global.init, kappa.global.init ),
-                            overall_lik3_kappa,
+                            overall.lik3.kappa,
                             method = "L-BFGS-B",
                             lower=c( tausq.global.LB, kappa.global.LB ),
                             upper=c( tausq.global.UB, kappa.global.UB ) )
@@ -715,9 +739,14 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     if( ns.nugget == TRUE & ns.variance == TRUE ){
       print("Calculating the smoothness parameter MLEs")
 
-      fit.nuggets <<- obs.nuggets
-      fit.variance <<- obs.variance
-      overall.MLEs <- optim( kappa.global.init, overall_lik4_kappa, method = "L-BFGS-B",
+      overall.lik4.kappa <- make_global_loglik4_kappa( data = data, Xmat = Xmat,
+                                                       cov.model = cov.model,
+                                                       Scalemat = Scale.mat,
+                                                       Distmat = Dist.mat,
+                                                       obs.nuggets = obs.nuggets,
+                                                       obs.variance = obs.variance )
+
+      overall.MLEs <- optim( kappa.global.init, overall.lik4.kappa, method = "L-BFGS-B",
                              lower=c( kappa.global.LB ),
                              upper=c( kappa.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
@@ -979,9 +1008,7 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
 #' \code{Aniso_fit} estimates the parameters of the stationary spatial model.
 #' Required inputs are the observed data and locations (a geoR object
 #' with $coords and $data). Optional inputs include the covariance model
-#' (exponential is the default), and whether or not the model should be
-#' isotropic. The heavy lifting of this function is done by the
-#' \code{\link[geoR]{likfit}} function in \code{geoR}.
+#' (exponential is the default).
 #'
 #' @param geodata A list containing elements \code{coords} and \code{data} as
 #' described next. Typically an object of the class "\code{geodata}", although
@@ -992,9 +1019,10 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
 #' coordinates of the N data locations. By default, it takes the \code{coords}
 #' component of the argument \code{geodata}, if provided.
 #' @param data A vector or matrix with N rows, containing the data values.
-#' By default, it takes the \code{data} component of the argument
-#' \code{geodata}, if provided. The stationary model cannot take multiple
-#' replicates.
+#' Inputting a vector corresponds to a single replicate of data, while
+#' inputting a matrix corresponds to replicates. In the case of replicates,
+#' the model assumes the replicates are independent and identically
+#' distributed.
 #' @param cov.model A string specifying the model for the correlation
 #' function; following \code{geoR}, defaults to \code{"exponential"}.
 #' Options available in this package are: "\code{exponential}",
@@ -1003,83 +1031,249 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
 #' details, see documentation for \code{\link[geoR]{cov.spatial}}.
 #' @param mean.model An object of class \code{\link[stats]{formula}},
 #' specifying the mean model to be used. Defaults to an intercept only.
-#' @param iso.model Logical; indicates whether the stationary model should
-#' be isotropic (\code{TRUE}) or anisotropic (\code{FALSE}). Defaults to
-#' \code{FALSE}.
+#'
+#' @param local.pars.LB,local.pars.UB Optional vectors of lower and upper
+#' bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
+#' \code{\link[stats]{optim}} function for the local parameter estimation.
+#' Each vector must be of length five,
+#' containing values for lam1, lam2, tausq, sigmasq, and nu. Default for
+#' \code{local.pars.LB} is \code{rep(1e-05,5)}; default for
+#' \code{local.pars.UB} is \code{c(max.distance/2, max.distance/2, 4*resid.var, 4*resid.var, 100)},
+#' where \code{max.distance} is the maximum interpoint distance of the
+#' observed data and \code{resid.var} is the residual variance from using
+#' \code{\link[stats]{lm}} with \code{mean.model}.
+#'
+#' @param local.ini.pars Optional vector of initial values used by the
+#' \code{"L-BFGS-B"} method option in the \code{\link[stats]{optim}}
+#' function for the local parameter estimation. The vector must be of length
+#' five, containing values for lam1, lam2, tausq, sigmasq, and nu. Defaults
+#' to \code{c(max.distance/10, max.distance/10, 0.1*resid.var, 0.9*resid.var, 1)},
+#' where \code{max.distance} is the maximum interpoint distance of the
+#' observed data and \code{resid.var} is the residual variance from using
+#' \code{\link[stats]{lm}} with \code{mean.model}.
 #'
 #' @return A list with the following components:
-#' \item{MLEs.save}{Table of global maximum likelihood estimates for lam1,
-#' lam2, eta, tausq, sigmasq, and nu.}
+#' \item{MLEs.save}{Table of local maximum likelihood estimates for each
+#' mixture component location.}
 #' \item{data}{Observed data values.}
 #' \item{beta.GLS}{Vector of generalized least squares estimates of beta,
 #' the mean coefficients.}
+#' \item{beta.cov}{Covariance matrix of the generalized least squares
+#' estimate of beta.}
+#' \item{Mean.coefs}{"Regression table" for the mean coefficient estimates,
+#' listing the estimate, standard error, and t-value.}
+#' \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
+#' using all relevant parameter estimates.}
+#' \item{Cov.mat.inv}{Inverse of \code{Cov.mat}, the estimated covariance
+#' matrix (\code{N.obs} x \code{N.obs}).}
 #' \item{aniso.pars}{Vector of MLEs for the anisotropy parameters lam1,
 #' lam2, eta.}
 #' \item{aniso.mat}{2 x 2 anisotropy matrix, calculated from
 #' \code{aniso.pars}.}
-#' \item{tausq.est}{Scalar maximum likelihood stimate of tausq (nugget
+#' \item{tausq.est}{Scalar maximum likelihood estimate of tausq (nugget
 #' variance).}
-#' \item{sigmasq.est}{Scalar maximum likelihood estimate of sigmasq (process
-#' variance).}
+#' \item{sigmasq.est}{Scalar maximum likelihood estimate of sigmasq
+#' (process variance).}
 #' \item{kappa.MLE}{Scalar maximum likelihood estimate for kappa (when
 #' applicable).}
 #' \item{cov.model}{String; the correlation model used for estimation.}
 #' \item{coords}{N x 2 matrix of observation locations.}
 #' \item{global.loglik}{Scalar value of the maximized likelihood from the
 #' global optimization (if available).}
-#' \item{likfit.obj}{Object output from the \code{\link[geoR]{likfit}}
-#' function; used in calculating predictions.}
+#' \item{Xmat}{Design matrix, obtained from using \code{\link[stats]{lm}}
+#' with \code{mean.model}.}
 #'
 #' @examples
-#' \dontrun{
-#' # Using the "simdata" data available in the package.
-#' anisofit.model <- Aniso_fit( coords = simdata$sim.locations,
-#' data = simdata$sim.data, cov.model = "exponential",
-#' mean.model = simdata$sim.data ~ simdata$sim.locations
-#' + simdata$sim.locations[-holdout.index,2] )
-#' }
+#' # Using iid standard Gaussian data
+#' aniso.fit <- Aniso_fit( coords = cbind(runif(200), runif(200)),
+#' data = rnorm(200) )
+#'
 #'
 #' @export
-#' @importFrom geoR likfit
+#' @importFrom geoR cov.spatial
+#' @importFrom StatMatch mahalanobis.dist
 
 Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                        cov.model = "exponential", mean.model = data ~ 1,
-                       iso.model = FALSE ){
+                       local.pars.LB = NULL, local.pars.UB = NULL,
+                       local.ini.pars = NULL ){
 
   N <- dim(coords)[1]
+  data <- as.matrix(data)
+  p <- dim(data)[2]
 
   # Make sure cov.model is one of the permissible options
   if( cov.model != "cauchy" & cov.model != "matern" & cov.model != "circular" &
-        cov.model != "cubic" & cov.model != "gaussian" & cov.model != "exponential" &
-        cov.model != "spherical" & cov.model != "wave" ){
+      cov.model != "cubic" & cov.model != "gaussian" & cov.model != "exponential" &
+      cov.model != "spherical" & cov.model != "wave" ){
     print("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian, exponential, spherical, or wave).")
   }
 
+  #===========================================================================
+  # Calculate the design matrix
+  #===========================================================================
+  OLS.model <- lm( mean.model, x=TRUE )
 
-  aniso.ml <- likfit( coords = coords, data = data,
-                      ini = c(1,1), fix.psiA = iso.model, fix.psiR = iso.model,
-                      lik.method = "REML",
-                      trend = mean.model,
-                      cov.model = cov.model )
-
-
-  aniso.lam1 <- aniso.ml$cov.pars[2] * aniso.ml$aniso.pars[2]
-  aniso.lam2 <- aniso.ml$cov.pars[2]
-  aniso.eta <- aniso.ml$aniso.pars[2] + pi/2
-  aniso.Sigma <- kernel_cov( c(aniso.lam1, aniso.lam2, aniso.eta) )
-
-  MLEs.save <- data.frame( matrix(c(aniso.lam1, aniso.lam2, aniso.eta,
-                                    aniso.ml$nugget, aniso.ml$sigmasq,
-                                    aniso.ml$kappa),
-                                  nrow=1) )
-  names(MLEs.save) <- c("lam1", "lam2", "eta", "tausq", "sigmasq", "kappa" )
-
-  global.lik <-  - aniso.ml$loglik
+  Xmat <- matrix( unname( OLS.model$x ), nrow=N )
 
   #===========================================================================
-  # GLS estimate of beta
+  # Specify lower, upper, and initial parameter values for optim()
   #===========================================================================
-  beta.GLS <- unname(aniso.ml$beta)
+  lon_min <- min(coords[,1])
+  lon_max <- max(coords[,1])
+  lat_min <- min(coords[,2])
+  lat_max <- max(coords[,2])
+
+  max.distance <- sqrt( sum((c(lon_min,lat_min) - c(lon_max,lat_max))^2))
+
+  if( p > 1 ){
+    ols.sigma <- NULL
+    for(i in 1:length(names(summary(OLS.model)))){
+      ols.sigma <- c( ols.sigma, summary(OLS.model)[[i]]$sigma )
+    }
+    resid.var <- (max(ols.sigma))^2
+  }
+  if( p == 1 ){
+    resid.var <- summary(OLS.model)$sigma^2
+  }
+
+  #=================================
+  # Lower limits for optim()
+  #=================================
+  if( is.null(local.pars.LB) == TRUE ){
+    lam1.LB <- 1e-05
+    lam2.LB <- 1e-05
+    tausq.local.LB <- 1e-05
+    sigmasq.local.LB <- 1e-05
+    kappa.local.LB <- 1e-05
+  }
+  if( is.null(local.pars.LB) == FALSE ){
+    lam1.LB <- local.pars.LB[1]
+    lam2.LB <- local.pars.LB[2]
+    tausq.local.LB <- local.pars.LB[3]
+    sigmasq.local.LB <- local.pars.LB[4]
+    kappa.local.LB <- local.pars.LB[5]
+  }
+
+  #=================================
+  # Upper limits for optim()
+  #=================================
+  if( is.null(local.pars.UB) == TRUE ){
+    lam1.UB <- max.distance/2
+    lam2.UB <- max.distance/2
+    tausq.local.UB <- 4*resid.var
+    sigmasq.local.UB <- 4*resid.var
+    kappa.local.UB <- 100
+  }
+  if( is.null(local.pars.UB) == FALSE ){
+    lam1.UB <- local.pars.UB[1]
+    lam2.UB <- local.pars.UB[2]
+    tausq.local.UB <- local.pars.UB[3]
+    sigmasq.local.UB <- local.pars.UB[4]
+    kappa.local.UB <- local.pars.UB[5]
+  }
+
+  #=================================
+  # Initial values for optim()
+  #=================================
+
+  if( is.null(local.ini.pars) == TRUE ){
+    lam1.init <- max.distance/10
+    lam2.init <- max.distance/10
+    tausq.local.init <- 0.1*resid.var
+    sigmasq.local.init <- 0.9*resid.var
+    kappa.local.init <- 1
+  }
+  if( is.null(local.ini.pars) == FALSE ){
+    lam1.init <- local.ini.pars[1]
+    lam2.init <- local.ini.pars[2]
+    tausq.local.init <- local.ini.pars[3]
+    sigmasq.local.init <- local.ini.pars[4]
+    kappa.local.init <- local.ini.pars[5]
+  }
+
+  #===========================================================================
+  # MLEs
+  #===========================================================================
+
+  print(paste("Estimating the variance/covariance parameters.", sep=""))
+
+  # Covariance models with the kappa parameter
+  if( cov.model == "matern" || cov.model == "cauchy" ){
+
+    # Calculate a locally anisotropic covariance
+    # Parameter order is lam1, lam2, eta, tausq, sigmasq, kappa
+    anis.model.kappa <- make_aniso_loglik_kappa( locations = coords,
+                                                 cov.model = cov.model,
+                                                 data = data,
+                                                 Xmat = Xmat )
+
+    MLEs <- optim( c(lam1.init, lam2.init, pi/4, tausq.local.init,
+                     sigmasq.local.init, kappa.local.init ),
+                   anis.model.kappa,
+                   method = "L-BFGS-B",
+                   lower=c( lam1.LB, lam2.LB, 0, tausq.local.LB, sigmasq.local.LB ),
+                   upper=c( lam1.UB, lam2.UB, pi/2,
+                            tausq.local.UB, sigmasq.local.UB, kappa.local.UB ) )
+    if( MLEs$convergence != 0 ){
+      print( paste("There was an error with optim(): ", MLEs$message) )
+    }
+    MLE.pars <- MLEs$par
+  }
+  # Covariance models without the kappa parameter
+  if( cov.model != "matern" & cov.model != "cauchy" ){
+
+    # Calculate a locally anisotropic covariance
+    # Parameter order is lam1, lam2, eta, tausq, sigmasq
+    anis.model <- make_aniso_loglik( locations = coords,
+                                     cov.model = cov.model,
+                                     data = data,
+                                     Xmat = Xmat )
+
+    MLEs <- optim( c( lam1.init, lam2.init, pi/4, tausq.local.init,
+                      sigmasq.local.init ),
+                   anis.model,
+                   method = "L-BFGS-B",
+                   lower=c( lam1.LB, lam2.LB, 0, tausq.local.LB, sigmasq.local.LB ),
+                   upper=c( lam1.UB, lam2.UB, pi/2,
+                            tausq.local.UB, sigmasq.local.UB ) )
+    if( MLEs$convergence != 0 ){
+      print( paste("There was an error with optim(): ", MLEs$message) )
+    }
+
+    MLE.pars <- c(MLEs$par, NA)
+  }
+
+  # Save all MLEs
+  # Parameter order: lam1, lam2, eta, tausq, sigmasq, mu, kappa
+  MLEs.save <- MLE.pars
+
+  # Put the MLEs into a data frame
+  names(MLEs.save) <- c( "lam1", "lam2", "eta", "tausq", "sigmasq", "kappa" )
+  MLEs.save <- data.frame( t(MLEs.save) )
+
+  aniso.mat <- kernel_cov( MLE.pars[1:3] )
+
+  global.lik <-  -MLEs$value
+
+  #===========================================================================
+  # Calculate the covariance matrix using the MLEs
+  #===========================================================================
+  distances <- mahalanobis.dist( data.x = coords, vc = aniso.mat )
+  NS.cov <- MLE.pars[5] * cov.spatial( distances, cov.model = cov.model,
+                                       cov.pars = c(1,1), kappa = MLE.pars[6] )
+  Data.Cov <- NS.cov + diag(rep(MLE.pars[4], N))
+
+  #===========================================================================
+  # Calculate the GLS estimate of beta
+  #===========================================================================
+  Data.Cov.inv <- solve(Data.Cov)
+  beta.cov <- chol2inv( chol(t(Xmat)%*%Data.Cov.inv%*%Xmat) )/p
+  beta.GLS <- (p*beta.cov %*% t(Xmat) %*% Data.Cov.inv %*% data %*% rep(1,p))/p
+  Mean.coefs <- data.frame( Estimate = beta.GLS,
+                            Std.Error = sqrt(diag(beta.cov)),
+                            t.val = beta.GLS/sqrt(diag(beta.cov)) )
+
 
   #===========================================================================
   # Output
@@ -1087,19 +1281,22 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   output <- list( MLEs.save = MLEs.save,
                   data = data,
                   beta.GLS = beta.GLS,
-                  aniso.pars = c(aniso.lam1, aniso.lam2, aniso.eta),
-                  aniso.mat = aniso.Sigma,
-                  tausq.est = aniso.ml$nugget,
-                  sigmasq.est = aniso.ml$sigmasq,
-                  kappa.MLE = aniso.ml$kappa,
+                  beta.cov = beta.cov,
+                  Mean.coefs = Mean.coefs,
+                  Cov.mat = Data.Cov,
+                  Cov.mat.inv = Data.Cov.inv,
+                  aniso.pars =  MLE.pars[1:3],
+                  aniso.mat = aniso.mat,
+                  tausq.est = MLE.pars[4],
+                  sigmasq.est = MLE.pars[5],
+                  kappa.MLE = MLE.pars[6],
                   cov.model = cov.model,
                   coords = coords,
-                  global.loglik = global.lik,
-                  likfit.obj = aniso.ml )
+                  Xmat = Xmat,
+                  global.loglik = global.lik )
   return(output)
 
 }
-
 #======================================================================================
 # Calculate predictions using the output of Aniso.fit()
 #======================================================================================
@@ -1113,14 +1310,12 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
 #' \code{Aniso_pred} calculates the kriging predictor and corresponding
 #' standard errors at unmonitored sites.
 #'
-#' @param Aniso.fit.obj Object from calling \code{Aniso.fit}.
+#' @param Aniso.fit.obj Object from calling \code{Aniso_fit}.
 #' @param pred.coords Matrix of locations where predictions are required.
-#' @param mean.model.d Formula object; following
-#' \code{\link[geoR]{krige.conv}}, specifies
-#' the trend (covariate) values at the data locations.
-#' @param mean.model.l Formula object; following
-#' \code{\link[geoR]{krige.conv}}, specifies
-#' the trend (covariate) values at the prediction locations.
+#' @param pred.covariates Matrix of covariates for the prediction locations,
+#' NOT including an intercept. The number of columns for this matrix must
+#' match the design matrix from \code{mean.model} in \code{\link{NSconvo_fit}}.
+#' Defaults to an intercept only.
 #'
 #' @return A list with the following components:
 #' \item{pred.means}{Vector of the kriging predictor, for each location in
@@ -1130,32 +1325,63 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
 #'
 #' @examples
 #' \dontrun{
-#' pred.S <- Aniso_pred( Aniso.fit.obj = anisofit.model,
-#' pred.coords = matrix(c(1,1), ncol=2),
-#' mean.model.d = simdata$sim.data ~ simdata$sim.locations[,1]
-#' + simdata$sim.locations[,2],
-#' mean.model.l = ~ c(1) + c(1) )
+#' pred.S <- Aniso_pred( Aniso.fit.obj = aniso.fit,
+#' pred.coords = cbind(runif(300),runif(300)) )
 #' }
 #'
 #' @export
-#' @importFrom geoR krige.conv
-#' @importFrom geoR krige.control
+#' @importFrom geoR cov.spatial
+#' @importFrom StatMatch mahalanobis.dist
 
-Aniso_pred <- function( Aniso.fit.obj, pred.coords, mean.model.d = ~ 1, mean.model.l = ~ 1 ){
+Aniso_pred <- function( Aniso.fit.obj, pred.coords, pred.covariates = NULL ){
 
   M <- dim(pred.coords)[1]
-  N <- dim(Aniso.fit.obj$coords)
-  predict.aniso <- krige.conv( coords = Aniso.fit.obj$coords,
-                               data = Aniso.fit.obj$data,
-                               locations = pred.coords,
-                               krige = krige.control( type.krige = "ok",
-                                                      trend.d = mean.model.d,
-                                                      trend.l = mean.model.l,
-                                                      obj.model = Aniso.fit.obj$likfit.obj) )
+  beta.MLE <- as.matrix(Aniso.fit.obj$beta.GLS)
+  tausq.est <- Aniso.fit.obj$tausq.est
+  sigmasq.est <- Aniso.fit.obj$sigmasq.est
+  kappa.MLE <- Aniso.fit.obj$kappa.MLE
+  Cov.mat.inv <- Aniso.fit.obj$Cov.mat.inv
+  data <- Aniso.fit.obj$data
+  N <- length(Aniso.fit.obj$data)
+  coords <- Aniso.fit.obj$coords
+  cov.model <- Aniso.fit.obj$cov.model
+  Xmat <- Aniso.fit.obj$Xmat
+  aniso.mat <- Aniso.fit.obj$aniso.mat
+
+  # Design matrix for prediction locations
+  if( is.null(pred.covariates) == TRUE ){
+    Xpred <- rep(1, M)
+  }
+  if( is.null(pred.covariates) == FALSE ){
+    Xpred <- cbind( rep(1, M), pred.covariates )
+  }
+
+  data <- matrix(data, nrow=N)
+  p <- dim(data)[2]
+
+  #===========================================================================
+  # Predictions
+  #===========================================================================
+
+  #=======================================
+  # Calculate the cross-correlation
+  CC.distances <- mahalanobis.dist( data.x = pred.coords, data.y = coords, vc = aniso.mat )
+  CrossCov <- sigmasq.est * cov.spatial( CC.distances, cov.model = cov.model,
+                                         cov.pars = c(1,1), kappa = kappa.MLE )
+
+  #=============================
+  # Prediction means and SDs
+  pred.means <- matrix(NA,M,p)
+  for(i in 1:p){
+    pred.means[,i] <- Xpred %*% beta.MLE + ( (CrossCov) %*% Cov.mat.inv
+                                             %*% ( Aniso.fit.obj$data[,i] - Xmat %*% beta.MLE) )
+  }
+  pred.SDs <- sqrt( rep(tausq.est + sigmasq.est, M) - diag( (CrossCov) %*% Cov.mat.inv %*% t(CrossCov) ) )
+
   #=============================
   # Output
-  output <- list( pred.means = predict.aniso$predict,
-                  pred.SDs = sqrt(predict.aniso$krige.var) )
+  output <- list( pred.means = pred.means,
+                  pred.SDs = pred.SDs )
   return(output)
 }
 

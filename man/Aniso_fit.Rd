@@ -5,7 +5,8 @@
 \title{Fit the stationary spatial model}
 \usage{
 Aniso_fit(geodata, coords = geodata$coords, data = geodata$data,
-  cov.model = "exponential", mean.model = data ~ 1, iso.model = FALSE)
+  cov.model = "exponential", mean.model = data ~ 1, local.pars.LB = NULL,
+  local.pars.UB = NULL, local.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -19,9 +20,10 @@ coordinates of the N data locations. By default, it takes the \code{coords}
 component of the argument \code{geodata}, if provided.}
 
 \item{data}{A vector or matrix with N rows, containing the data values.
-By default, it takes the \code{data} component of the argument
-\code{geodata}, if provided. The stationary model cannot take multiple
-replicates.}
+Inputting a vector corresponds to a single replicate of data, while
+inputting a matrix corresponds to replicates. In the case of replicates,
+the model assumes the replicates are independent and identically
+distributed.}
 
 \item{cov.model}{A string specifying the model for the correlation
 function; following \code{geoR}, defaults to \code{"exponential"}.
@@ -33,49 +35,67 @@ details, see documentation for \code{\link[geoR]{cov.spatial}}.}
 \item{mean.model}{An object of class \code{\link[stats]{formula}},
 specifying the mean model to be used. Defaults to an intercept only.}
 
-\item{iso.model}{Logical; indicates whether the stationary model should
-be isotropic (\code{TRUE}) or anisotropic (\code{FALSE}). Defaults to
-\code{FALSE}.}
+\item{local.pars.LB,local.pars.UB}{Optional vectors of lower and upper
+bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
+\code{\link[stats]{optim}} function for the local parameter estimation.
+Each vector must be of length five,
+containing values for lam1, lam2, tausq, sigmasq, and nu. Default for
+\code{local.pars.LB} is \code{rep(1e-05,5)}; default for
+\code{local.pars.UB} is \code{c(max.distance/2, max.distance/2, 4*resid.var, 4*resid.var, 100)},
+where \code{max.distance} is the maximum interpoint distance of the
+observed data and \code{resid.var} is the residual variance from using
+\code{\link[stats]{lm}} with \code{mean.model}.}
+
+\item{local.ini.pars}{Optional vector of initial values used by the
+\code{"L-BFGS-B"} method option in the \code{\link[stats]{optim}}
+function for the local parameter estimation. The vector must be of length
+five, containing values for lam1, lam2, tausq, sigmasq, and nu. Defaults
+to \code{c(max.distance/10, max.distance/10, 0.1*resid.var, 0.9*resid.var, 1)},
+where \code{max.distance} is the maximum interpoint distance of the
+observed data and \code{resid.var} is the residual variance from using
+\code{\link[stats]{lm}} with \code{mean.model}.}
 }
 \value{
 A list with the following components:
-\item{MLEs.save}{Table of global maximum likelihood estimates for lam1,
-lam2, eta, tausq, sigmasq, and nu.}
+\item{MLEs.save}{Table of local maximum likelihood estimates for each
+mixture component location.}
 \item{data}{Observed data values.}
 \item{beta.GLS}{Vector of generalized least squares estimates of beta,
 the mean coefficients.}
+\item{beta.cov}{Covariance matrix of the generalized least squares
+estimate of beta.}
+\item{Mean.coefs}{"Regression table" for the mean coefficient estimates,
+listing the estimate, standard error, and t-value.}
+\item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
+using all relevant parameter estimates.}
+\item{Cov.mat.inv}{Inverse of \code{Cov.mat}, the estimated covariance
+matrix (\code{N.obs} x \code{N.obs}).}
 \item{aniso.pars}{Vector of MLEs for the anisotropy parameters lam1,
 lam2, eta.}
 \item{aniso.mat}{2 x 2 anisotropy matrix, calculated from
 \code{aniso.pars}.}
-\item{tausq.est}{Scalar maximum likelihood stimate of tausq (nugget
+\item{tausq.est}{Scalar maximum likelihood estimate of tausq (nugget
 variance).}
-\item{sigmasq.est}{Scalar maximum likelihood estimate of sigmasq (process
-variance).}
+\item{sigmasq.est}{Scalar maximum likelihood estimate of sigmasq
+(process variance).}
 \item{kappa.MLE}{Scalar maximum likelihood estimate for kappa (when
 applicable).}
 \item{cov.model}{String; the correlation model used for estimation.}
 \item{coords}{N x 2 matrix of observation locations.}
 \item{global.loglik}{Scalar value of the maximized likelihood from the
 global optimization (if available).}
-\item{likfit.obj}{Object output from the \code{\link[geoR]{likfit}}
-function; used in calculating predictions.}
+\item{Xmat}{Design matrix, obtained from using \code{\link[stats]{lm}}
+with \code{mean.model}.}
 }
 \description{
 \code{Aniso_fit} estimates the parameters of the stationary spatial model.
 Required inputs are the observed data and locations (a geoR object
 with $coords and $data). Optional inputs include the covariance model
-(exponential is the default), and whether or not the model should be
-isotropic. The heavy lifting of this function is done by the
-\code{\link[geoR]{likfit}} function in \code{geoR}.
+(exponential is the default).
 }
 \examples{
-\dontrun{
-# Using the "simdata" data available in the package.
-anisofit.model <- Aniso_fit( coords = simdata$sim.locations,
-data = simdata$sim.data, cov.model = "exponential",
-mean.model = simdata$sim.data ~ simdata$sim.locations
-+ simdata$sim.locations[-holdout.index,2] )
-}
+# Using iid standard Gaussian data
+aniso.fit <- Aniso_fit( coords = cbind(runif(200), runif(200)),
+data = rnorm(200) )
 }
 

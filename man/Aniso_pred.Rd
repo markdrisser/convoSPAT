@@ -5,20 +5,17 @@
 \title{Obtain predictions at unobserved locations for the stationary
 spatial model.}
 \usage{
-Aniso_pred(Aniso.fit.obj, pred.coords, mean.model.d = ~1, mean.model.l = ~1)
+Aniso_pred(Aniso.fit.obj, pred.coords, pred.covariates = NULL)
 }
 \arguments{
-\item{Aniso.fit.obj}{Object from calling \code{Aniso.fit}.}
+\item{Aniso.fit.obj}{Object from calling \code{Aniso_fit}.}
 
 \item{pred.coords}{Matrix of locations where predictions are required.}
 
-\item{mean.model.d}{Formula object; following
-\code{\link[geoR]{krige.conv}}, specifies
-the trend (covariate) values at the data locations.}
-
-\item{mean.model.l}{Formula object; following
-\code{\link[geoR]{krige.conv}}, specifies
-the trend (covariate) values at the prediction locations.}
+\item{pred.covariates}{Matrix of covariates for the prediction locations,
+NOT including an intercept. The number of columns for this matrix must
+match the design matrix from \code{mean.model} in \code{\link{NSconvo_fit}}.
+Defaults to an intercept only.}
 }
 \value{
 A list with the following components:
@@ -33,11 +30,8 @@ standard errors at unmonitored sites.
 }
 \examples{
 \dontrun{
-pred.S <- Aniso_pred( Aniso.fit.obj = anisofit.model,
-pred.coords = matrix(c(1,1), ncol=2),
-mean.model.d = simdata$sim.data ~ simdata$sim.locations[,1]
-+ simdata$sim.locations[,2],
-mean.model.l = ~ c(1) + c(1) )
+pred.S <- Aniso_pred( Aniso.fit.obj = aniso.fit,
+pred.coords = cbind(runif(300),runif(300)) )
 }
 }
 

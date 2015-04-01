@@ -150,13 +150,8 @@ the covariance model (exponential is the default), and whether or not the
 nugget and process variance will be spatially-varying.
 }
 \examples{
-\dontrun{
-# Using the "simdata" data available in the package.
-fit.model <- NSconvo_fit( coords = simdata$sim.locations,
-data = simdata$sim.data, cov.model = "exponential", fit.radius = 2.3,
-mc.locations = simdata$mc.locations, lambda.w = 2,
-mean.model = (simdata$sim.data ~ simdata$sim.locations[,1]
-+ simdata$sim.locations[,2]) )
-}
+# Using white noise data
+fit.model <- NSconvo_fit( coords = cbind( runif(300), runif(300)),
+data = rnorm(300), fit.radius = 0.4, N.mc = 4 )
 }
 

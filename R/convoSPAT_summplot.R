@@ -435,7 +435,7 @@ plot_correlation <- function( model.fit.obj, ref.loc, all.pred.locs, NS.model = 
 
     }
 
-    Unscl.cross <- geoR::cov.spatial( Dist.cross, cov.model = covmodel,
+    Unscl.cross <- geoR::cov.spatial( Dist.cross, cov.model = cov.model,
                                 cov.pars = c(1,1), kappa = kappa )
     Cov <- matrix(Scale.cross * Unscl.cross, ncol=1)
 

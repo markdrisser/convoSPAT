@@ -20,147 +20,180 @@
 # Estimates: nugget, variance
 
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameters tausq, sigmasq with a fixed correlation
 #' matrix (smoothness is fixed).
 #'
-#' @param params A vector of inputs: tausq and sigmasq.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param Dmat A diagonal matrix of eigenvalues for the covariance
+#' matrix.
+#' @param Vmat An orthogonal matrix of eigenvectors for the covariance
+#' matrix.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (tausq, sigmasq).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik1( c(0.5,1) )
+#' make_global_loglik1( data, Xmat, Dmat, Vmat )
 #' }
 #'
 #' @export
 
-overall_lik1 <- function(params){
+make_global_loglik1 <- function( data, Xmat, Dmat, Vmat ){
 
-  # Parameters
-  tausq <- params[1]
-  sigmasq <- params[2]
+  fixed <- c(FALSE, FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    # Parameters
+    tausq <- params[1]
+    sigmasq <- params[2]
 
-  Cov.inv <- (1/tausq)*( diag(rep(1,N)) - (sigmasq/tausq)*Vmat
-                         %*% diag( 1/(1/diag(Dmat) + rep(sigmasq/tausq,N)) )%*%t(Vmat) )
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- (1/tausq)*( diag(rep(1,N)) - (sigmasq/tausq)*Vmat
+                           %*% diag( 1/(1/diag(Dmat) + rep(sigmasq/tausq,N)) )%*%t(Vmat) )
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  log.det.Cov <- sum( log( 1/diag(Dmat) + rep(sigmasq/tausq,N) ) ) + sum( log(diag(Dmat)) ) + N*log(tausq)
-  loglikelihood <- 0.5*( p*log.det.Cov + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    log.det.Cov <- sum( log( 1/diag(Dmat) + rep(sigmasq/tausq,N) ) ) + sum( log(diag(Dmat)) ) + N*log(tausq)
+    loglikelihood <- 0.5*( p*log.det.Cov + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
 
 # Estimates: variance
 
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameter sigmasq with a fixed correlation
 #' matrix (smoothness is fixed). The nugget variance is taken
 #' to be spatially-varing.
 #'
-#' @param params Scalar input for sigmasq.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param Corr The correlation matrix matrix.
+#' @param obs.nuggets A vector containing the spatially-varying nuggets
+#' corresponding to each data location.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' value of sigmasq.
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik2( 1 )
+#' make_global_loglik2( data, Xmat, Corr, obs.nuggets )
 #' }
 #'
 #' @export
 
-overall_lik2 <- function(params){
+make_global_loglik2 <- function( data, Xmat, Corr, obs.nuggets ){
 
-  # Parameters
-  sigmasq <- params[1]
+  fixed <- c(FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    # Parameters
+    sigmasq <- params[1]
 
-  Edecomp <- eigen(sigmasq*Corr + diag(fit.nuggets))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(sigmasq*Corr + diag(obs.nuggets))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
 
 
 # Estimates: nugget
 
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameter tausq with a fixed correlation
 #' matrix (smoothness is fixed). The process variance is taken
 #' to be spatially-varing.
 #'
-#' @param params Scalar input for sigmasq.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param Corr The correlation matrix matrix.
+#' @param obs.variance A vector containing the spatially-varying variance
+#' corresponding to each data location.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' value of sigmasq.
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik2( 1 )
+#' make_global_loglik3( data, Xmat, Corr, obs.variance )
 #' }
 #'
 #' @export
 
-overall_lik3 <- function(params){
+make_global_loglik3 <- function( data, Xmat, Corr, obs.variance ){
 
-  # Parameters
-  tausq <- params[1]
+  fixed <- c(FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    tausq <- params[1]
 
-  Edecomp <- eigen(diag(sqrt(fit.variance)) %*% Corr %*% diag(sqrt(fit.variance)) + diag(rep(tausq,N)))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(diag(sqrt(obs.variance)) %*% Corr %*% diag(sqrt(obs.variance)) + diag(rep(tausq,N)))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
 
 #===================================
@@ -170,215 +203,273 @@ overall_lik3 <- function(params){
 # Estimates: nugget, variance, kappa
 
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameters tausq, sigmasq, and nu.
 #'
-#' @param params A vector of inputs: tausq, sigmasq, and nu.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param cov.model String; the covariance model.
+#' @param Scalemat Matrix; contains the scaling quantities from the
+#' covariance function.
+#' @param Distmat Matrix; contains the scaled distances.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (tausq, sigmasq, nu).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik1_kappa( c(0.5,1,1) )
+#' make_global_loglik1_kappa( data, Xmat, cov.model, Scalemat, Distmat )
 #' }
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 
-overall_lik1_kappa <- function(params){
+make_global_loglik1_kappa <- function( data, Xmat, cov.model, Scalemat, Distmat ){
 
-  # Parameters
-  tausq <- params[1]
-  sigmasq <- params[2]
-  kapp <- params[3]
+  fixed <- c(FALSE, FALSE, FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  Unscl.corr <- cov.spatial( Distmat, cov.model = covmodel,
-                             cov.pars = c(1,1), kappa = kapp )
-  Corr <- Scalemat*Unscl.corr
+    # Parameters
+    tausq <- params[1]
+    sigmasq <- params[2]
+    kapp <- params[3]
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    Unscl.corr <- cov.spatial( Distmat, cov.model = cov.model,
+                               cov.pars = c(1,1), kappa = kapp )
+    Corr <- Scalemat*Unscl.corr
 
-  Edecomp <- eigen(sigmasq*Corr + diag(rep(tausq,N)))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(sigmasq*Corr + diag(rep(tausq,N)))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
 
 
 # Estimates: variance, kappa
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameters sigmasq and nu. The nugget variance is
 #' taken to be spatially-varying.
 #'
-#' @param params A vector of inputs: sigmasq and nu.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param cov.model String; the covariance model.
+#' @param Scalemat Matrix; contains the scaling quantities from the
+#' covariance function.
+#' @param Distmat Matrix; contains the scaled distances.
+#' @param obs.nuggets A vector containing the spatially-varying nuggets
+#' corresponding to each data location.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (sigmasq, nu).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik2_kappa( c(1,1) )
+#' make_global_loglik2_kappa( data, Xmat, cov.model, Scalemat, Distmat, obs.nuggets )
 #' }
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 
-overall_lik2_kappa <- function(params){
+make_global_loglik2_kappa <- function( data, Xmat, cov.model, Scalemat, Distmat, obs.nuggets ){
 
-  # Parameters
-  sigmasq <- params[1]
-  kapp <- params[2]
+  fixed <- c(FALSE, FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  Unscl.corr <- cov.spatial( Distmat, cov.model = covmodel,
-                             cov.pars = c(1,1), kappa = kapp )
-  Corr <- Scalemat*Unscl.corr
+    # Parameters
+    sigmasq <- params[1]
+    kapp <- params[2]
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    Unscl.corr <- cov.spatial( Distmat, cov.model = cov.model,
+                               cov.pars = c(1,1), kappa = kapp )
+    Corr <- Scalemat*Unscl.corr
 
-  Edecomp <- eigen(sigmasq * Corr + diag(fit.nuggets))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(sigmasq * Corr + diag(obs.nuggets))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
 
 # Estimates: nugget, kappa
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameters tausq and nu. The process variance is
 #' taken to be spatially-varying.
 #'
-#' @param params A vector of inputs: tausq and nu.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param cov.model String; the covariance model.
+#' @param Scalemat Matrix; contains the scaling quantities from the
+#' covariance function.
+#' @param Distmat Matrix; contains the scaled distances.
+#' @param obs.variance A vector containing the spatially-varying variance
+#' corresponding to each data location.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (tausq, nu).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik3_kappa( c(0.5,1) )
+#' make_global_loglik3_kappa( data, Xmat, cov.model, Scalemat, Distmat, obs.variance )
 #' }
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 
-overall_lik3_kappa <- function(params){
+make_global_loglik3_kappa <- function( data, Xmat, cov.model, Scalemat, Distmat, obs.variance ){
 
-  # Parameters
-  tausq <- params[1]
-  kapp <- params[2]
+  fixed <- c(FALSE, FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  Unscl.corr <- cov.spatial( Distmat, cov.model = covmodel,
-                             cov.pars = c(1,1), kappa = kapp )
-  Corr <- Scalemat*Unscl.corr
+    # Parameters
+    tausq <- params[1]
+    kapp <- params[2]
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    Unscl.corr <- cov.spatial( Distmat, cov.model = cov.model,
+                               cov.pars = c(1,1), kappa = kapp )
+    Corr <- Scalemat*Unscl.corr
 
-  Edecomp <- eigen(diag( sqrt(fit.variance) ) %*% Corr %*% diag( sqrt(fit.variance) ) + tausq*diag(rep(1,N)))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(diag( sqrt(obs.variance) ) %*% Corr %*% diag( sqrt(obs.variance) ) + tausq*diag(rep(1,N)))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
+
 
 # Estimates: kappa
 #ROxygen comments ----
-#' Global parameter estimation for the nonstationary model.
+#' Constructor functions for global parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' global variance parameters nu. The process variance
 #' and nugget variance are taken to be spatially-varying.
 #'
-#' @param params A vector of inputs: nu.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
+#' @param cov.model String; the covariance model.
+#' @param Scalemat Matrix; contains the scaling quantities from the
+#' covariance function.
+#' @param Distmat Matrix; contains the scaled distances.
+#' @param obs.variance A vector containing the spatially-varying variance
+#' corresponding to each data location.
+#' @param obs.nuggets A vector containing the spatially-varying nuggets
+#' corresponding to each data location.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (nu).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' overall_lik4_kappa( c(1) )
+#' make_global_loglik4_kappa( data, Xmat, cov.model, Scalemat, Distmat, obs.variance, obs.nuggets )
 #' }
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 
-overall_lik4_kappa <- function(params){
+make_global_loglik4_kappa <- function( data, Xmat, cov.model, Scalemat, Distmat, obs.variance, obs.nuggets ){
 
-  # Parameters
-  kapp <- params[1]
+  fixed <- c(FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  Unscl.corr <- cov.spatial( Distmat, cov.model = covmodel,
-                             cov.pars = c(1,1), kappa = kapp )
-  Corr <- Scalemat*Unscl.corr
+    # Parameters
+    kapp <- params[1]
 
-  N <- dim(fit.data)[1]
-  p <- dim(fit.data)[2]
+    Unscl.corr <- cov.spatial( Distmat, cov.model = cov.model,
+                               cov.pars = c(1,1), kappa = kapp )
+    Corr <- Scalemat*Unscl.corr
 
-  Edecomp <- eigen(diag( sqrt(fit.variance) ) %*% Corr %*% diag( sqrt(fit.variance) ) + diag(fit.nuggets))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    N <- dim(data)[1]
+    p <- dim(data)[2]
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(diag( sqrt(obs.variance) ) %*% Corr %*% diag( sqrt(obs.variance) ) + diag(obs.nuggets))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xmat) %*% Cov.inv %*% Xmat
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(fit.data)%*%Ptemp%*%fit.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 100000 }
+    return(loglikelihood)
+
+  }
 }
+
 #======================================================================================
 
 #======================================================================================
@@ -392,142 +483,166 @@ overall_lik4_kappa <- function(params){
 # without kappa:
 
 #ROxygen comments ----
-#' Local parameter estimation for the nonstationary model.
+#' Constructor functions for local parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' local variance parameters lam1, lam2, eta, tausq, and sigmasq,
 #' assuming the smoothness is fixed, using a Gaussian likelihood with
 #' an anisotropic covariance structure.
 #'
-#' @param params A vector of inputs: lam1, lam2, eta, tausq, and sigmasq
+#' @param locations A matrix of locations.
+#' @param cov.model String; the covariance model.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (lam1, lam2, eta, tausq, sigmasq).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' anis_model( c(1,1,0,0.1,1) )
+#' make_aniso_loglik( locations, cov.model, data, Xmat )
 #' }
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 #' @importFrom StatMatch mahalanobis.dist
 
-anis_model <- function(params){
+make_aniso_loglik <- function( locations, cov.model, data, Xmat ){
 
-  # Kernel parameters
-  lam1 <- params[1]
-  lam2 <- params[2]
-  eta <- params[3]
+  fixed <- c(FALSE, FALSE, FALSE, FALSE, FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  # Nugget
-  tausq <- params[4]
+    # Kernel parameters
+    lam1 <- params[1]
+    lam2 <- params[2]
+    eta <- params[3]
 
-  # Process variance
-  sigmasq <- params[5]
+    # Nugget
+    tausq <- params[4]
 
-  #================================
-  N <- dim(temp.locations)[1]
-  p <- dim(temp.data)[2]
+    # Process variance
+    sigmasq <- params[5]
 
-  Pmat <- matrix(c(cos(eta),-sin(eta),sin(eta),cos(eta)),nrow=2,byrow=T)
-  Lmat <- diag(c(lam1,lam2))
+    # Smoothness
+    KAPPA <- NULL
 
-  Sigma <- Pmat %*% Lmat %*% t(Pmat)
+    #================================
+    N <- dim(locations)[1]
+    p <- dim(data)[2]
 
-  distances <- mahalanobis.dist( data.x = temp.locations, vc = Sigma )
-  NS.cov <- sigmasq*cov.spatial(distances, cov.model = covmodel,
-                         cov.pars = c(1,1), kappa = KAPPA)
+    Pmat <- matrix(c(cos(eta),-sin(eta),sin(eta),cos(eta)),nrow=2,byrow=T)
+    Dmat <- diag(c(lam1,lam2))
 
-  Edecomp <- eigen(NS.cov + diag(rep(tausq,N)))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    Sigma <- Pmat %*% Dmat %*% t(Pmat)
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    distances <- mahalanobis.dist( data.x = locations, vc = Sigma )
+    NS.cov <- sigmasq*cov.spatial(distances, cov.model = cov.model,
+                                  cov.pars = c(1,1), kappa = KAPPA)
 
-  XCX <- t(Xtemp) %*% Cov.inv %*% Xtemp
-  XCX.inv <- chol2inv( chol(XCX) )
+    Edecomp <- eigen(NS.cov + diag(rep(tausq,N)))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xtemp %*% XCX.inv %*% t(Xtemp) %*% Cov.inv
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(temp.data)%*%Ptemp%*%temp.data)) )
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 1000000 }
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  return(loglikelihood)
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 1000000 }
+
+    return(loglikelihood)
+
+  }
 }
+
 
 # with kappa:
 #ROxygen comments ----
-#' Local parameter estimation for the nonstationary model.
+#' Constructor functions for local parameter estimation.
 #'
-#' This function calculates the maximum likelihood estimates of
+#' This function generates another function to be used within \code{optim} to
+#' obtain maximum likelihood estimates of
 #' local variance parameters lam1, lam2, eta, tausq, sigmasq, and
 #' nu (smoothness) using a Gaussian likelihood with
 #' an anisotropic covariance structure.
 #'
-#' @param params A vector of inputs: lam1, lam2, eta, tausq, sigmasq, and nu
+#' @param locations A matrix of locations.
+#' @param cov.model String; the covariance model.
+#' @param data A vector or matrix of data to use in the likelihood
+#' calculation.
+#' @param Xmat The design matrix for the mean model.
 #'
-#' @return This function returns the loglikelihood for a particular
-#' combination of (lam1, lam2, eta, tausq, sigmasq, nu).
+#' @return This function returns another function for use in \code{optim}.
 #'
 #' @examples
 #' \dontrun{
-#' anis_model_kappa( c(1,1,0,0.1,1,1) )
+#' make_aniso_loglik_kappa( locations, cov.model, data, Xmat )
 #' }
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 #' @importFrom StatMatch mahalanobis.dist
 
-anis_model_kappa <- function(params){
+make_aniso_loglik_kappa <- function( locations, cov.model, data, Xmat ){
 
-  # Kernel parameters
-  lam1 <- params[1]
-  lam2 <- params[2]
-  eta <- params[3]
+  fixed <- c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
 
-  # Nugget
-  tausq <- params[4]
+    # Kernel parameters
+    lam1 <- params[1]
+    lam2 <- params[2]
+    eta <- params[3]
 
-  # Process variance
-  sigmasq <- params[5]
+    # Nugget
+    tausq <- params[4]
 
-  # Smoothness
-  KAPPA <- params[6]
+    # Process variance
+    sigmasq <- params[5]
 
-  #================================
-  N <- dim(temp.locations)[1]
-  p <- dim(temp.data)[2]
+    # Smoothness
+    KAPPA <- params[6]
 
-  Pmat <- matrix(c(cos(eta),-sin(eta),sin(eta),cos(eta)),nrow=2,byrow=T)
-  Dmat <- diag(c(lam1,lam2))
+    #================================
+    N <- dim(locations)[1]
+    p <- dim(data)[2]
 
-  Sigma <- Pmat %*% Dmat %*% t(Pmat)
+    Pmat <- matrix(c(cos(eta),-sin(eta),sin(eta),cos(eta)),nrow=2,byrow=T)
+    Dmat <- diag(c(lam1,lam2))
 
-  distances <- mahalanobis.dist( data.x = temp.locations, vc = Sigma )
-  NS.cov <- sigmasq*cov.spatial(distances, cov.model = covmodel,
-                                cov.pars = c(1,1), kappa = KAPPA)
+    Sigma <- Pmat %*% Dmat %*% t(Pmat)
 
-  Edecomp <- eigen(NS.cov + diag(rep(tausq,N)))
-  Dmat.temp <- diag(Edecomp$values)
-  Vmat.temp <- Edecomp$vectors
+    distances <- mahalanobis.dist( data.x = locations, vc = Sigma )
+    NS.cov <- sigmasq*cov.spatial(distances, cov.model = cov.model,
+                                  cov.pars = c(1,1), kappa = KAPPA)
 
-  Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
+    Edecomp <- eigen(NS.cov + diag(rep(tausq,N)))
+    Dmat.temp <- diag(Edecomp$values)
+    Vmat.temp <- Edecomp$vectors
 
-  XCX <- t(Xtemp) %*% Cov.inv %*% Xtemp
-  XCX.inv <- chol2inv( chol(XCX) )
+    Cov.inv <- Vmat.temp %*% diag( 1/diag(Dmat.temp) ) %*% t(Vmat.temp)
 
-  Ptemp <- Cov.inv - Cov.inv %*% Xtemp %*% XCX.inv %*% t(Xtemp) %*% Cov.inv
+    XCX <- t(Xmat) %*% Cov.inv %*% Xmat
+    XCX.inv <- chol2inv( chol(XCX) )
 
-  # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
-  loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(temp.data)%*%Ptemp%*%temp.data)) )
+    Ptemp <- Cov.inv - Cov.inv %*% Xmat %*% XCX.inv %*% t(Xmat) %*% Cov.inv
 
-  if(abs(loglikelihood) == Inf){ loglikelihood <- 1000000 }
+    # Default is to minimize -- want the maximum. Calculate the neg loglikelihood.
+    loglikelihood <- 0.5*( p*sum(log(diag(Dmat.temp))) + p*log(det(XCX)) + sum(diag(t(data)%*%Ptemp%*%data)) )
 
-  return(loglikelihood)
+    if(abs(loglikelihood) == Inf){ loglikelihood <- 1000000 }
 
+    return(loglikelihood)
+
+  }
 }
 
