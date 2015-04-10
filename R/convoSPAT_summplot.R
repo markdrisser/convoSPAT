@@ -32,19 +32,27 @@
 
 summary_NS <- function( fit.model ){
 
-  print("Locally estimated mean and variance parameters: ")
-  print( fit.model$MLEs.save )
+  cat("Locally estimated mean and variance parameters: \n")
+  cat( fit.model$MLEs.save )
 
-  print( "Estimate of the mean coefficients: ")
-  print( fit.model$beta.GLS )
-  print( "Regression table for mean coefficients: ")
-  print( fit.model$Mean.coefs)
-  print( "Estimate of the nugget variance: ")
-  print( fit.model$tausq.est )
-  print( "Estimate of the process variance: ")
-  print( fit.model$sigmasq.est )
-  print( "Estimate of the smoothness: ")
-  print( fit.model$kappa.MLE )
+  cat( "Estimate of the mean coefficients: ", fit.model$beta.GLS, "\n" )
+  cat( "Regression table for mean coefficients: \n")
+  cat( fit.model$Mean.coefs)
+  if( fit.model$ns.nugget == FALSE ){
+    cat( "Estimate of the nugget variance: ", fit.model$tausq.est, "\n" )
+  }
+  if( fit.model$ns.nugget == TRUE ){
+    cat( "Spatially-varying nugget variance. \n Average nugget variance: ",
+         mean(fit.model$tausq.est), "\n")
+  }
+  if( fit.model$ns.variance == FALSE ){
+    cat( "Estimate of the process variance: ", fit.model$sigmasq.est, "\n" )
+  }
+  if( fit.model$ns.variance == TRUE ){
+    cat( "Spatially-varying process variance. \n Average process variance: ",
+         mean(fit.model$sigmasq.est), "\n")
+  }
+  cat( "Estimate of the smoothness: ", fit.model$kappa.MLE )
 
 }
 
