@@ -174,8 +174,8 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   if( cov.model != "cauchy" & cov.model != "matern" & cov.model != "circular" &
         cov.model != "cubic" & cov.model != "gaussian" & cov.model != "exponential" &
         cov.model != "spherical" & cov.model != "wave" ){
-    print("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian,
-          exponential, spherical, or wave).")
+    cat("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian,
+          exponential, spherical, or wave). \n")
   }
 
   #===========================================================================
@@ -184,7 +184,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   if( is.null(mc.locations) == TRUE ){ # Calculate the mixture component locations
 
     if( is.null(N.mc) == TRUE ){
-      print("Please enter the desired number of mixture component locations.")
+      cat("Please enter the desired number of mixture component locations. \n")
     }
 
     lon_min <- min(coords[,1])
@@ -364,8 +364,8 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
       temp.data <- temp.dat[distances <= fit.radius,]
       temp.data <- as.matrix(temp.data, nrow=n.fit)
 
-      print(paste("Calculating the mixture component parameter set for location ", k," using ",
-                  n.fit," observations.", sep=""))
+      cat("Calculating the mixture component parameter set for location ", k," using ",
+                  n.fit," observations. \n", sep="")
 
       # Covariance models with the kappa parameter
       if( cov.model == "matern" || cov.model == "cauchy" ){
@@ -385,7 +385,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                        upper=c( lam1.UB, lam2.UB, pi/2,
                                 tausq.local.UB, sigmasq.local.UB, kappa.local.UB ) )
         if( MLEs$convergence != 0 ){
-          print( paste("There was an error with optim(): ", MLEs$message) )
+          cat( "There was an error with optim(): \n", MLEs$message, "\n" )
         }
         MLE.pars <- MLEs$par
       }
@@ -407,7 +407,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                        upper=c( lam1.UB, lam2.UB, pi/2,
                                 tausq.local.UB, sigmasq.local.UB ) )
         if( MLEs$convergence != 0 ){
-          print( paste("There was an error with optim(): ", MLEs$message) )
+          cat( "There was an error with optim(): \n", MLEs$message, "\n" )
         }
 
         MLE.pars <- c(MLEs$par, NA)
@@ -521,7 +521,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     # Global parameter estimation
 
     if( ns.nugget == FALSE & ns.variance == FALSE ){
-      print("Calculating the variance parameter MLEs")
+      cat("Calculating the variance parameter MLEs. \n")
 
       Corr.decomp <- eigen(NS.corr)
 
@@ -537,7 +537,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                              lower=c( tausq.global.LB, sigmasq.global.LB ),
                              upper=c( tausq.global.UB, sigmasq.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
       tausq.MLE <- overall.MLEs$par[1]
       sigmasq.MLE <- overall.MLEs$par[2]
@@ -551,7 +551,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     }
 
     if( ns.nugget == TRUE & ns.variance == FALSE ){
-      print("Calculating the variance parameter MLEs")
+      cat("Calculating the variance parameter MLEs. \n")
 
       overall.lik2 <- make_global_loglik2( data = data,
                                            Xmat = Xmat,
@@ -562,7 +562,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                              lower=c( sigmasq.global.LB ),
                              upper=c( sigmasq.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
       sigmasq.MLE <- overall.MLEs$par[1]
       global.lik <- overall.MLEs$value
@@ -575,7 +575,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     }
 
     if( ns.nugget == FALSE & ns.variance == TRUE ){
-      print("Calculating the variance parameter MLEs")
+      cat("Calculating the variance parameter MLEs. \n")
 
       overall.lik3 <- make_global_loglik3( data = data,
                                            Xmat = Xmat,
@@ -587,7 +587,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                              upper=c( tausq.global.UB ) )
 
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
       tausq.MLE <- overall.MLEs$par[1]
       global.lik <- overall.MLEs$value
@@ -654,7 +654,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     # Global parameter estimation
 
     if( ns.nugget == FALSE & ns.variance == FALSE ){
-      print("Calculating the variance and smoothness parameter MLEs")
+      cat("Calculating the variance and smoothness parameter MLEs. \n")
 
       overall.lik1.kappa <- make_global_loglik1_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -667,7 +667,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                             lower=c( tausq.global.LB, sigmasq.global.LB, kappa.global.LB ),
                             upper=c( tausq.global.UB, sigmasq.global.UB, kappa.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
       tausq.MLE <- overall.MLEs$par[1]
       sigmasq.MLE <- overall.MLEs$par[2]
@@ -681,7 +681,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     }
 
     if( ns.nugget == TRUE & ns.variance == FALSE ){
-      print("Calculating the variance and smoothness parameter MLEs")
+      cat("Calculating the variance and smoothness parameter MLEs. \n")
 
       overall.lik2.kappa <- make_global_loglik2_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -695,7 +695,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                             lower=c( sigmasq.global.LB, kappa.global.LB ),
                             upper=c( sigmasq.global.UB, kappa.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
       sigmasq.MLE <- overall.MLEs$par[1]
       kappa.MLE <- overall.MLEs$par[2]
@@ -710,7 +710,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     }
 
     if( ns.nugget == FALSE & ns.variance == TRUE ){
-      print("Calculating the variance and smoothness parameter MLEs")
+      cat("Calculating the variance and smoothness parameter MLEs. \n")
 
       overall.lik3.kappa <- make_global_loglik3_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -724,7 +724,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                             lower=c( tausq.global.LB, kappa.global.LB ),
                             upper=c( tausq.global.UB, kappa.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
       tausq.MLE <- overall.MLEs$par[1]
       kappa.MLE <- overall.MLEs$par[2]
@@ -737,7 +737,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
     }
 
     if( ns.nugget == TRUE & ns.variance == TRUE ){
-      print("Calculating the smoothness parameter MLEs")
+      cat("Calculating the smoothness parameter MLEs. \n")
 
       overall.lik4.kappa <- make_global_loglik4_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -750,7 +750,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                              lower=c( kappa.global.LB ),
                              upper=c( kappa.global.UB ) )
       if( overall.MLEs$convergence != 0 ){
-        print( paste("There was an error with optim(): ", overall.MLEs$message) )
+        cat( "There was an error with optim(): \n", overall.MLEs$message, "\n" )
       }
 
       kappa.MLE <- overall.MLEs$par[1]
@@ -940,11 +940,13 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
 
   #=======================================
   # Calculate the cross-correlation
-  print("Calculating the cross-correlations. (This step can be time consuming, depending on the number of prediction locations.)")
+  cat("Calculating the cross-correlations. (This step can be time consuming, depending on the number of prediction locations.)")
 
   Scale.cross <- matrix(NA, M, N)
   Dist.cross <- matrix(NA, M, N)
 
+  cat("\n")
+  cat("Progress:")
   # Calculate the elements of the MxN cross-correlation matrix.
   for(i in 1:N){
 
@@ -966,8 +968,8 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
       Dist.cross[j,i] <- sqrt(sum(vec_ij^2))
 
     }
-    if( i %% 100 == 0 ){
-      print(paste("Progress: ", 100*round(i/N,2),"%", sep=""))
+    if( i %% floor(N/10) == 0 ){
+      cat(100*round(i/N,2),"%")
     }
   }
   Unscl.cross <- cov.spatial( Dist.cross, cov.model = cov.model,
@@ -1106,7 +1108,7 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   if( cov.model != "cauchy" & cov.model != "matern" & cov.model != "circular" &
       cov.model != "cubic" & cov.model != "gaussian" & cov.model != "exponential" &
       cov.model != "spherical" & cov.model != "wave" ){
-    print("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian, exponential, spherical, or wave).")
+    cat("Please specify a valid covariance model (cauchy, matern, circular, cubic, gaussian, exponential, spherical, or wave).")
   }
 
   #===========================================================================
@@ -1196,7 +1198,7 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   # MLEs
   #===========================================================================
 
-  print(paste("Estimating the variance/covariance parameters.", sep=""))
+  cat("Estimating the variance/covariance parameters.")
 
   # Covariance models with the kappa parameter
   if( cov.model == "matern" || cov.model == "cauchy" ){
@@ -1216,7 +1218,7 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                    upper=c( lam1.UB, lam2.UB, pi/2,
                             tausq.local.UB, sigmasq.local.UB, kappa.local.UB ) )
     if( MLEs$convergence != 0 ){
-      print( paste("There was an error with optim(): ", MLEs$message) )
+      cat("There was an error with optim(): \n", MLEs$message, "\n")
     }
     MLE.pars <- MLEs$par
   }
@@ -1238,7 +1240,7 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                    upper=c( lam1.UB, lam2.UB, pi/2,
                             tausq.local.UB, sigmasq.local.UB ) )
     if( MLEs$convergence != 0 ){
-      print( paste("There was an error with optim(): ", MLEs$message) )
+      cat("There was an error with optim(): \n", MLEs$message, "\n")
     }
 
     MLE.pars <- c(MLEs$par, NA)

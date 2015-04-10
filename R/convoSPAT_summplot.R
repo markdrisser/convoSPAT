@@ -33,26 +33,51 @@
 summary_NS <- function( fit.model ){
 
   cat("Locally estimated mean and variance parameters: \n")
-  cat( fit.model$MLEs.save )
+  print( round(fit.model$MLEs.save,5) )
+  cat("\n")
 
-  cat( "Estimate of the mean coefficients: ", fit.model$beta.GLS, "\n" )
+  cat( "Estimate of the mean coefficients: ", round(fit.model$beta.GLS,4), "\n" )
+  cat("\n")
   cat( "Regression table for mean coefficients: \n")
-  cat( fit.model$Mean.coefs)
-  if( fit.model$ns.nugget == FALSE ){
-    cat( "Estimate of the nugget variance: ", fit.model$tausq.est, "\n" )
+  print( round(fit.model$Mean.coefs, 5) )
+  cat("\n")
+
+  #===================================
+  # Print the nugget estimate, for:
+
+  # 1. The nonstationary model
+  if(is.null(fit.model$ns.nugget) == FALSE){
+    if( fit.model$ns.nugget == FALSE ){
+      cat( "Estimate of the nugget variance: ", round( fit.model$tausq.est, 4), "\n" )
+    }
+    if( fit.model$ns.nugget == TRUE ){
+      cat( "Spatially-varying nugget variance. \n Average nugget variance: ",
+           round( mean(fit.model$tausq.est), 4), "\n")
+    }
   }
-  if( fit.model$ns.nugget == TRUE ){
-    cat( "Spatially-varying nugget variance. \n Average nugget variance: ",
-         mean(fit.model$tausq.est), "\n")
+  # 2. The stationary model
+  if(is.null(fit.model$ns.nugget) == TRUE){
+    cat( "Estimate of the nugget variance: ", round( fit.model$tausq.est, 4), "\n" )
   }
-  if( fit.model$ns.variance == FALSE ){
-    cat( "Estimate of the process variance: ", fit.model$sigmasq.est, "\n" )
+
+  #===================================
+  # Print the process variance estimate, for:
+
+  # 1. The nonstationary model
+  if(is.null(fit.model$ns.variance) == FALSE){
+    if( fit.model$ns.variance == FALSE ){
+      cat( "Estimate of the process variance: ", round(fit.model$sigmasq.est,4), "\n" )
+    }
+    if( fit.model$ns.variance == TRUE ){
+      cat( "Spatially-varying process variance. \n Average process variance: ",
+           round(mean(fit.model$sigmasq.est), 4), "\n")
+    }
   }
-  if( fit.model$ns.variance == TRUE ){
-    cat( "Spatially-varying process variance. \n Average process variance: ",
-         mean(fit.model$sigmasq.est), "\n")
+  # 2. The stationary model
+  if(is.null(fit.model$ns.variance) == TRUE){
+    cat( "Estimate of the process variance: ", round(fit.model$sigmasq.est,4), "\n" )
   }
-  cat( "Estimate of the smoothness: ", fit.model$kappa.MLE )
+  cat( "Estimate of the smoothness: ", round(fit.model$kappa.MLE, 4) )
 
 }
 
