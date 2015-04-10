@@ -946,7 +946,7 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
   Dist.cross <- matrix(NA, M, N)
 
   cat("\n")
-  cat("Progress:")
+  cat("Progress: ")
   # Calculate the elements of the MxN cross-correlation matrix.
   for(i in 1:N){
 
@@ -969,9 +969,10 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
 
     }
     if( i %% floor(N/10) == 0 ){
-      cat(100*round(i/N,2),"%")
+      cat(100*round(i/N,2),"% ... ", sep="")
     }
   }
+  cat("100% \n")
   Unscl.cross <- cov.spatial( Dist.cross, cov.model = cov.model,
                               cov.pars = c(1,1), kappa = kappa.MLE )
   NS.cross.corr <- Scale.cross * Unscl.cross
