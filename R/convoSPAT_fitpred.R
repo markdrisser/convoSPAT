@@ -491,7 +491,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
       Scale.mat[i,i] <- 1
       Dist.mat[i,i] <- 0
 
-      Ui <- chol(Kerneli)
+      # Ui <- chol(Kerneli)
 
       if(i < N){
         for(j in (i+1):N){ # Off-diagonal elements
@@ -628,7 +628,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
       Scale.mat[i,i] <- 1
       Dist.mat[i,i] <- 0
 
-      Ui <- chol(Kerneli)
+      #Ui <- chol(Kerneli)
 
       if(i < N){
         for(j in (i+1):N){ # Off-diagonal elements
