@@ -858,6 +858,8 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
 
 NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL ){
 
+  pred.coords <- as.matrix(pred.coords)
+
   M <- dim(pred.coords)[1]
   mc.locations <- NSconvo.fit.obj$mc.locations
   K <- dim(mc.locations)[1]
