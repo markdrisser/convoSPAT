@@ -500,12 +500,13 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
           det_j <- Kernelj[1,1]*Kernelj[2,2] - Kernelj[1,2]*Kernelj[2,1]
 
           avg_ij <- 0.5 * (Kerneli + Kernelj)
-          Uij <- chol(avg_ij)
+          # Uij <- chol(avg_ij)
           det_ij <- avg_ij[1,1]*avg_ij[2,2] - avg_ij[1,2]*avg_ij[2,1]
-          vec_ij <- backsolve(Uij, (coords[i,]-coords[j,]), transpose = TRUE)
+          #vec_ij <- backsolve(Uij, (coords[i,]-coords[j,]), transpose = TRUE)
 
           Scale.mat[i,j] <- sqrt( sqrt(det_i*det_j) / det_ij )
-          Dist.mat[i,j] <- sqrt(sum(vec_ij^2))
+          # Dist.mat[i,j] <- sqrt(sum(vec_ij^2))
+          Dist.mat[i,j] <- sqrt( t(coords[i,]-coords[j,]) %*% solve(avg_ij) %*% (coords[i,]-coords[j,]) )
 
           Scale.mat[j,i] <- Scale.mat[i,j]
           Dist.mat[j,i] <- Dist.mat[i,j]
@@ -636,12 +637,13 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
           det_j <- Kernelj[1,1]*Kernelj[2,2] - Kernelj[1,2]*Kernelj[2,1]
 
           avg_ij <- 0.5 * (Kerneli + Kernelj)
-          Uij <- chol(avg_ij)
+          # Uij <- chol(avg_ij)
           det_ij <- avg_ij[1,1]*avg_ij[2,2] - avg_ij[1,2]*avg_ij[2,1]
-          vec_ij <- backsolve(Uij, (coords[i,]-coords[j,]), transpose = TRUE)
+          #vec_ij <- backsolve(Uij, (coords[i,]-coords[j,]), transpose = TRUE)
 
           Scale.mat[i,j] <- sqrt( sqrt(det_i*det_j) / det_ij )
-          Dist.mat[i,j] <- sqrt(sum(vec_ij^2))
+          # Dist.mat[i,j] <- sqrt(sum(vec_ij^2))
+          Dist.mat[i,j] <- sqrt( t(coords[i,]-coords[j,]) %*% solve(avg_ij) %*% (coords[i,]-coords[j,]) )
 
           Scale.mat[j,i] <- Scale.mat[i,j]
           Dist.mat[j,i] <- Dist.mat[i,j]
