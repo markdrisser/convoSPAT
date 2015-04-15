@@ -166,6 +166,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                          global.pars.LB = NULL, global.pars.UB = NULL,
                          local.ini.pars = NULL, global.ini.pars = NULL ){
 
+  coords <- as.matrix(coords)
   N <- dim(coords)[1]
   data <- as.matrix(data, nrow=N)
   p <- dim(data)[2]
