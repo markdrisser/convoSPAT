@@ -181,7 +181,7 @@ evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
     sigma <- pred.SDs[m]
     zscore <- (holdout.data[m] - pred.mean[m])/sigma
 
-    CRPS_out[m] <- sigma*( (1/sqrt(pi)) - ( 2*dnorm(zscore) - zscore*( 2*pnorm(zscore) - 1 ) )  )
+    CRPS_out[m] <- sigma*( (1/sqrt(pi)) - 2*dnorm(zscore) - zscore*( 2*pnorm(zscore) - 1 ) )
   }
 
   # MSPE
