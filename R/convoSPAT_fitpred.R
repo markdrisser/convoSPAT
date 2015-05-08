@@ -275,11 +275,11 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   # Upper limits for optim()
   #=================================
   if( is.null(local.pars.UB) == TRUE ){
-    lam1.UB <- max.distance/2
-    lam2.UB <- max.distance/2
+    lam1.UB <- max.distance/4
+    lam2.UB <- max.distance/4
     tausq.local.UB <- 4*resid.var
     sigmasq.local.UB <- 4*resid.var
-    kappa.local.UB <- 100
+    kappa.local.UB <- 30
   }
   if( is.null(local.pars.UB) == FALSE ){
     lam1.UB <- local.pars.UB[1]
@@ -291,7 +291,7 @@ NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   if( is.null(global.pars.UB) == TRUE ){
     tausq.global.UB <- 4*resid.var
     sigmasq.global.UB <- 4*resid.var
-    kappa.global.UB <- 100
+    kappa.global.UB <- 30
   }
   if( is.null(global.pars.UB) == FALSE ){
     tausq.global.UB <- global.pars.UB[1]
@@ -1167,11 +1167,11 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   # Upper limits for optim()
   #=================================
   if( is.null(local.pars.UB) == TRUE ){
-    lam1.UB <- max.distance/2
-    lam2.UB <- max.distance/2
+    lam1.UB <- max.distance/4
+    lam2.UB <- max.distance/4
     tausq.local.UB <- 4*resid.var
     sigmasq.local.UB <- 4*resid.var
-    kappa.local.UB <- 100
+    kappa.local.UB <- 30
   }
   if( is.null(local.pars.UB) == FALSE ){
     lam1.UB <- local.pars.UB[1]
@@ -1204,7 +1204,7 @@ Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
   # MLEs
   #===========================================================================
 
-  cat("Estimating the variance/covariance parameters.")
+  cat("Estimating the variance/covariance parameters. \n")
 
   # Covariance models with the kappa parameter
   if( cov.model == "matern" || cov.model == "cauchy" ){
