@@ -169,6 +169,8 @@ mc_N <- function( coords, mc.locations, fit.radius ){
 #' }
 #'
 #' @export
+#' @importFrom stats dnorm
+#' @importFrom stats pnorm
 
 evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
 
@@ -220,6 +222,8 @@ evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
 #'
 #' @export
 #' @importFrom ellipse ellipse
+#' @importFrom graphics lines
+#' @importFrom graphics plot
 
 plot_ellipses <- function( locations, kernels, length ){
 
@@ -288,6 +292,7 @@ plot_ellipses <- function( locations, kernels, length ){
 #' @export
 #' @importFrom fields image.plot
 #' @importFrom fields quilt.plot
+#' @importFrom graphics par
 #'
 plot_preds <- function( locations, predmeans, predSDs, main1 = "Predictions",
                         main2 = "Prediction standard errors", grid.locations = TRUE ){
@@ -334,6 +339,8 @@ plot_preds <- function( locations, predmeans, predSDs, main1 = "Predictions",
 #' @export
 #' @importFrom ellipse ellipse
 #' @importFrom plotrix draw.circle
+#' @importFrom graphics lines
+#' @importFrom graphics plot
 
 plot_mc <- function( mc.locations, mc.kernels, fit.radius, aniso.mat = NULL ){
 

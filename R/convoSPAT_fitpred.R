@@ -151,11 +151,13 @@
 #'
 #' @examples
 #' # Using white noise data
-#' fit.model <- NSconvo_fit( coords = cbind( runif(300), runif(300)),
-#' data = rnorm(300), fit.radius = 0.4, N.mc = 4 )
+#' fit.model <- NSconvo_fit( coords = cbind( runif(100), runif(100)),
+#' data = rnorm(100), fit.radius = 0.4, N.mc = 4 )
 #'
 #' @export
 #' @importFrom geoR cov.spatial
+#' @importFrom stats lm
+#' @importFrom stats optim
 
 NSconvo_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                          cov.model = "exponential", mean.model = data ~ 1,
@@ -1093,13 +1095,15 @@ NSconvo_pred <- function( NSconvo.fit.obj, pred.coords, pred.covariates = NULL )
 #'
 #' @examples
 #' # Using iid standard Gaussian data
-#' aniso.fit <- Aniso_fit( coords = cbind(runif(200), runif(200)),
-#' data = rnorm(200) )
+#' aniso.fit <- Aniso_fit( coords = cbind(runif(100), runif(100)),
+#' data = rnorm(100) )
 #'
 #'
 #' @export
 #' @importFrom geoR cov.spatial
 #' @importFrom StatMatch mahalanobis.dist
+#' @importFrom stats lm
+#' @importFrom stats optim
 
 Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
                        cov.model = "exponential", mean.model = data ~ 1,

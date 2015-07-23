@@ -95,7 +95,7 @@ with $coords and $data). Optional inputs include the covariance model
 }
 \examples{
 # Using iid standard Gaussian data
-aniso.fit <- Aniso_fit( coords = cbind(runif(200), runif(200)),
-data = rnorm(200) )
+aniso.fit <- Aniso_fit( coords = cbind(runif(100), runif(100)),
+data = rnorm(100) )
 }
 

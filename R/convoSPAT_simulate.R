@@ -156,6 +156,7 @@ f_mc_kernels <- function( lat.min = 0, lat.max = 5, lon.min = 0, lon.max = 5,
 #' }
 #'
 #' @export
+#' @importFrom stats runif
 
 NSconvo_sim <- function( grid = TRUE, lat.min = 0, lat.max = 5, lon.min = 0,
                          lon.max = 5, N.obs = 20^2, sim.locations = NULL, mc.kernels.obj = NULL,
