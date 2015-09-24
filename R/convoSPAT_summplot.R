@@ -275,6 +275,7 @@ evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
 #' @importFrom plotrix draw.circle
 #' @importFrom graphics lines
 #' @importFrom graphics plot
+#' @importFrom graphics points
 #' @importFrom fields image.plot
 #' @importFrom fields quilt.plot
 
