@@ -240,11 +240,10 @@ evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
 
 
 #ROxygen comments ----
-#' Plot from the nonstationary model: either (1) estimated anisotropy
-#' ellipses, or (2) estimated correlations.
+#' Plot from the nonstationary model.
 #'
 #' This function plots either the estimated anisotropy ellipses for each
-#' of the mixture component locations of the estimated correlation
+#' of the mixture component locations or the estimated correlation
 #' between a reference point and all other prediction locations.
 #'
 #' @param x A "NSconvo" object, from NSconvo_fit().
@@ -260,6 +259,14 @@ evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
 #' @param all.pred.locs A matrix of all prediction locations.
 #' @param grid Logical; indicates if the \code{all.pred.locs}
 #' are on a rectangular grid (\code{TRUE}) or not (\code{FALSE}).
+#' @param true.col Color value for the true mixture component ellipses
+#' (if plotted).
+#' @param aniso.col Color value for the anisotropy ellipse (if
+#' plotted).
+#' @param ns.col Color value for the mixture component ellipses.
+#' @param plot.mc.locs Logical; indicates whether the mixture
+#' component locations should be plotted (\code{TRUE}) or not
+#' (\code{FALSE}).
 #' @param ... Other options passed to \code{plot}.
 #'
 #' @return A plot of either the estimated ellipses or estimated
@@ -282,7 +289,8 @@ evaluate_CV <- function( holdout.data, pred.mean, pred.SDs ){
 plot.NSconvo <- function(x, plot.ellipses = TRUE,
                          fit.radius = NULL, aniso.mat = NULL, true.mc = NULL,
                          ref.loc = NULL, all.pred.locs = NULL, grid = TRUE,
-                         ... )
+                         true.col = 1, aniso.col = 4,
+                         ns.col = 2, plot.mc.locs = TRUE, ... )
 {
 if( !inherits(x, "NSconvo") ){
   warning("Object is not of type NSconvo.")
@@ -290,42 +298,40 @@ if( !inherits(x, "NSconvo") ){
 else{
   if( plot.ellipses == TRUE ){
 
-    object <- x
+    mc.locations <- x$mc.locations
+    mc.kernels <- x$mc.kernels
 
-    mc.locations <- object$mc.locations
-    mc.kernels <- object$mc.kernels
-
-    xmin <- min(mc.locations[, 1])
-    xmax <- max(mc.locations[, 1])
-    ymin <- min(mc.locations[, 2])
-    ymax <- max(mc.locations[, 2])
     K <- dim(mc.locations)[1]
+
     plot(ellipse(mc.kernels[, , 1], centre = mc.locations[1,], level = 0.5),
-         type = "l",
-         xlim = c(xmin - 0.25 * (xmax - xmin), xmax + 0.25 * (xmax - xmin)),
-         ylim = c(ymin - 0.25 * (ymax - ymin), ymax + 0.25 * (ymax - ymin)),
-         ... )
-    points(mc.locations[1,1], mc.locations[1,2], col = 4, cex = 2, pch="+" )
+         type = "l", col = ns.col, ... )
+
+    if( plot.mc.locs ){ points(mc.locations[1,1], mc.locations[1,2], cex = 1, pch="+" ) }
+
     if (is.null(aniso.mat) == FALSE) {
       lines(ellipse(aniso.mat, centre = mc.locations[1, ],
-                    level = 0.5), lty = "dashed", col = 4)
+                    level = 0.5), lty = "dashed", col = aniso.col )
     }
     if (is.null(true.mc) == FALSE) {
       lines(ellipse(true.mc[,,1], centre = mc.locations[1, ],
-                    level = 0.5), col = 2)
+                    level = 0.5), col = true.col )
     }
     plotrix::draw.circle(mc.locations[1, 1], mc.locations[1, 2], fit.radius,
-                         lty = "dashed")
+                         lty = "dashed" )
     for (k in 2:K) {
-      lines(ellipse(mc.kernels[, , k], centre = mc.locations[k,], level = 0.5), col = col )
+
+      lines(ellipse(mc.kernels[, , k], centre = mc.locations[k,], level = 0.5), col = ns.col )
+
       plotrix::draw.circle(mc.locations[k, 1], mc.locations[k,2], fit.radius, lty = "dashed")
-      points(mc.locations[k,1], mc.locations[k,2], col = 4, cex = 2, pch="+" )
+
+      if( plot.mc.locs ){ points(mc.locations[k,1], mc.locations[k,2], cex = 1, pch="+" ) }
       if (is.null(aniso.mat) == FALSE) {
-        lines(ellipse(aniso.mat, centre = mc.locations[k,], level = 0.5), lty = "dashed", col = 4)
+        lines(ellipse(aniso.mat, centre = mc.locations[k,], level = 0.5), lty = "dashed",
+              col = aniso.col)
       }
       if (is.null(true.mc) == FALSE) {
         lines(ellipse(true.mc[,,k], centre = mc.locations[k, ],
-                      level = 0.5), col = 2)
+                      level = 0.5), col = true.col)
       }
     }
   }
@@ -334,12 +340,12 @@ else{
 
     M <- dim(all.pred.locs)[1]
 
-    mc.kern <- object$mc.kernels
-    mc.loc <- object$mc.locations
+    mc.kern <- x$mc.kernels
+    mc.loc <- x$mc.locations
     K <- dim(mc.loc)[1]
-    lambda.w <- object$lambda.w
-    kappa <- object$kappa.MLE
-    cov.model <- object$cov.model
+    lambda.w <- x$lambda.w
+    kappa <- x$kappa.MLE
+    cov.model <- x$cov.model
     all.pred.weights <- matrix(NA, M, K)
     for (m in 1:M) {
       for (k in 1:K) {
@@ -441,11 +447,11 @@ plot.Aniso <- function(x, ref.loc = NULL, all.pred.locs = NULL,
 
     object <- x
 
-    lam1 <- object$aniso.pars[1]
-    lam2 <- object$aniso.pars[2]
-    eta <- object$aniso.pars[3]
-    kappa <- object$kappa.MLE
-    cov.model <- object$cov.model
+    lam1 <- x$aniso.pars[1]
+    lam2 <- x$aniso.pars[2]
+    eta <- x$aniso.pars[3]
+    kappa <- x$kappa.MLE
+    cov.model <- x$cov.model
     Pmat <- matrix(c(cos(eta), -sin(eta), sin(eta), cos(eta)),
                    nrow = 2, byrow = T)
     Dmat <- diag(c(lam1, lam2))
