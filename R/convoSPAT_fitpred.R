@@ -187,7 +187,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     if( class(sp.SPDF) != "SpatialPointsDataFrame" ){
       cat("\nPlease use a SpatialPointsDataFrame object for the 'sp.SPDF = ' input.\n")
     }
-    geodata <- as.geodata( sp.SPDF )
+    geodata <- geoR::as.geodata( sp.SPDF )
     coords <- geodata$coords
     data <- geodata$data
   }
