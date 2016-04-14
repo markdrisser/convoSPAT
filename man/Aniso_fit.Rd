@@ -4,9 +4,9 @@
 \alias{Aniso_fit}
 \title{Fit the stationary spatial model}
 \usage{
-Aniso_fit(geodata, coords = geodata$coords, data = geodata$data,
-  cov.model = "exponential", mean.model = data ~ 1, local.pars.LB = NULL,
-  local.pars.UB = NULL, local.ini.pars = NULL)
+Aniso_fit(geodata = NULL, sp.SPDF = NULL, coords = geodata$coords,
+  data = geodata$data, cov.model = "exponential", mean.model = data ~ 1,
+  local.pars.LB = NULL, local.pars.UB = NULL, local.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -14,6 +14,10 @@ described next. Typically an object of the class "\code{geodata}", although
 a geodata object only allows \code{data} to be a vector (no replicates).
 If not provided, the arguments \code{coords} and \code{data} must be
 provided instead.}
+
+\item{sp.SPDF}{A "\code{SpatialPointsDataFrame}" object, which contains the
+spatial coordinates and additional attribute variables corresponding to the
+spatoal coordinates}
 
 \item{coords}{An N x 2 matrix where each row has the two-dimensional
 coordinates of the N data locations. By default, it takes the \code{coords}

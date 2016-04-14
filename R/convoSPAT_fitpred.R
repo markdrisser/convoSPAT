@@ -1042,6 +1042,9 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
 #' a geodata object only allows \code{data} to be a vector (no replicates).
 #' If not provided, the arguments \code{coords} and \code{data} must be
 #' provided instead.
+#' @param sp.SPDF A "\code{SpatialPointsDataFrame}" object, which contains the
+#' spatial coordinates and additional attribute variables corresponding to the
+#' spatoal coordinates
 #' @param coords An N x 2 matrix where each row has the two-dimensional
 #' coordinates of the N data locations. By default, it takes the \code{coords}
 #' component of the argument \code{geodata}, if provided.
@@ -1122,10 +1125,30 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
 #' @importFrom stats lm
 #' @importFrom stats optim
 
-Aniso_fit <- function( geodata, coords = geodata$coords, data = geodata$data,
+Aniso_fit <- function( geodata = NULL, sp.SPDF = NULL,
+                       coords = geodata$coords, data = geodata$data,
                        cov.model = "exponential", mean.model = data ~ 1,
                        local.pars.LB = NULL, local.pars.UB = NULL,
                        local.ini.pars = NULL ){
+
+  #===========================================================================
+  # Formatting for coordinates/data
+  #===========================================================================
+  if( is.null(geodata) == FALSE ){
+    if( class(geodata) != "geodata" ){
+      cat("\nPlease use a geodata object for the 'geodata = ' input.\n")
+    }
+    coords <- geodata$coords
+    data <- geodata$data
+  }
+  if( is.null(sp.SPDF) == FALSE ){
+    if( class(sp.SPDF) != "SpatialPointsDataFrame" ){
+      cat("\nPlease use a SpatialPointsDataFrame object for the 'sp.SPDF = ' input.\n")
+    }
+    geodata <- geoR::as.geodata( sp.SPDF )
+    coords <- geodata$coords
+    data <- geodata$data
+  }
 
   N <- dim(coords)[1]
   data <- as.matrix(data)
