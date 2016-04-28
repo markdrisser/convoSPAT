@@ -20,11 +20,12 @@ locations.}
 A list with the following components:
 \item{CRPS}{The CRPS averaged over all hold-out locations.}
 \item{MSPE}{The mean squared prediction error.}
+\item{pMSDR}{The prediction mean square deviation ratio.}
 }
 \description{
-Calculate two evaluation criteria -- continuous rank probability score
-(CRPS) and mean squared prediction error (MSPE) -- comparing hold-out
-data and predictions.
+Calculate three evaluation criteria -- continuous rank probability score
+(CRPS), prediction mean square deviation ratio (pMSDR), and mean squared prediction
+error (MSPE) -- comparing hold-out data and predictions.
 }
 \examples{
 \dontrun{
