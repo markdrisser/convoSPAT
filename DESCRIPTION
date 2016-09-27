@@ -14,10 +14,12 @@ Description: Fits convolution-based nonstationary
     likelihood approach. Also provided are functions to fit stationary spatial
     models for comparison, calculate the kriging predictor and standard errors,
     and create various plots to visualize nonstationarity.
-Depends: R (>= 3.1.2)
+Depends:
+    R (>= 3.1.2)
 License: MIT + file LICENSE
 LazyData: TRUE
-Imports: stats,
+Imports:
+    stats,
     graphics,
     ellipse,
     fields,
@@ -26,3 +28,4 @@ Imports: stats,
     plotrix,
     StatMatch
 URL: http://github.com/markdrisser/convoSPAT
+RoxygenNote: 5.0.1
