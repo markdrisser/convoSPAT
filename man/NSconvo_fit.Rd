@@ -130,8 +130,8 @@ variance for each observation location.}
 applicable).}
 \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
 using all relevant parameter estimates.}
-\item{Cov.mat.inv}{Inverse of \code{Cov.mat}, the estimated covariance
-matrix (\code{N.obs} x \code{N.obs}).}
+\item{Cov.mat.chol}{Cholesky of \code{Cov.mat} (i.e., \code{chol(Cov.mat)}),
+the estimated covariance matrix (\code{N.obs} x \code{N.obs}).}
 \item{cov.model}{String; the correlation model used for estimation.}
 \item{ns.nugget}{Logical, indicating if the nugget variance was estimated
 as spatially-varing (\code{TRUE}) or constant (\code{FALSE}).}

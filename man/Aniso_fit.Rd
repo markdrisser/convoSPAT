@@ -72,8 +72,8 @@ estimate of beta.}
 listing the estimate, standard error, and t-value.}
 \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
 using all relevant parameter estimates.}
-\item{Cov.mat.inv}{Inverse of \code{Cov.mat}, the estimated covariance
-matrix (\code{N.obs} x \code{N.obs}).}
+\item{Cov.mat.chol}{Cholesky of \code{Cov.mat} (i.e., \code{chol(Cov.mat)}),
+the estimated covariance matrix (\code{N.obs} x \code{N.obs}).}
 \item{aniso.pars}{Vector of MLEs for the anisotropy parameters lam1,
 lam2, eta.}
 \item{aniso.mat}{2 x 2 anisotropy matrix, calculated from

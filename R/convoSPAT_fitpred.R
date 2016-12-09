@@ -1533,7 +1533,7 @@ predict.Aniso <- function(object, pred.coords, pred.covariates = NULL,
       for (i in 1:p) {
         pred.means[, i] <- Xpred %*% beta.MLE + crscov.Cinv %*% (object$data[, i] - Xmat %*% beta.MLE)
       }
-      pred.SDs <- sqrt((pred.variance + pred.nuggets) - diag(crscov.Cinv %*% t(CrossCov)))
+      pred.SDs <- sqrt(rep(tausq.est + sigmasq.est, M) - diag(crscov.Cinv %*% t(CrossCov)))
 
       output <- list(pred.means = pred.means, pred.SDs = pred.SDs)
       return(output)
