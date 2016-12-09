@@ -138,8 +138,8 @@
 #' applicable).}
 #' \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
 #' using all relevant parameter estimates.}
-#' \item{Cov.mat.inv}{Inverse of \code{Cov.mat}, the estimated covariance
-#' matrix (\code{N.obs} x \code{N.obs}).}
+#' \item{Cov.mat.chol}{Cholesky of \code{Cov.mat} (i.e., \code{chol(Cov.mat)}),
+#' the estimated covariance matrix (\code{N.obs} x \code{N.obs}).}
 #' \item{cov.model}{String; the correlation model used for estimation.}
 #' \item{ns.nugget}{Logical, indicating if the nugget variance was estimated
 #' as spatially-varing (\code{TRUE}) or constant (\code{FALSE}).}
@@ -887,9 +887,12 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   # Calculate the GLS estimate of beta
   #===========================================================================
 
-  Data.Cov.inv <- solve(Data.Cov)
-  beta.cov <- chol2inv( chol(t(Xmat)%*%Data.Cov.inv%*%Xmat) )/p
-  beta.GLS <- (p*beta.cov %*% t(Xmat) %*% Data.Cov.inv %*% data %*% rep(1,p))/p
+  # Data.Cov.inv <- solve(Data.Cov)
+  Data.Cov.chol <- chol(Data.Cov)
+
+  tX.Cinv <- t(backsolve(Data.Cov.chol, backsolve(Data.Cov.chol, Xmat, transpose = TRUE)))
+  beta.cov <- chol2inv( chol( tX.Cinv%*%Xmat) )/p
+  beta.GLS <- (p*beta.cov %*% tX.Cinv %*% data)/p
   Mean.coefs <- data.frame( Estimate = beta.GLS,
                             Std.Error = sqrt(diag(beta.cov)),
                             t.val = beta.GLS/sqrt(diag(beta.cov)) )
@@ -923,7 +926,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                   sigmasq.est = sigmasq.out,
                   kappa.MLE = kappa.MLE,
                   Cov.mat = Data.Cov,
-                  Cov.mat.inv = Data.Cov.inv,
+                  Cov.mat.chol = Data.Cov.chol,
                   cov.model = cov.model,
                   ns.nugget = ns.nugget,
                   ns.variance = ns.variance,
@@ -997,7 +1000,7 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
       sigmasq.est <- object$sigmasq.est
       kappa.MLE <- object$kappa.MLE
       mc.MLEs <- object$MLEs.save
-      Cov.mat.inv <- object$Cov.mat.inv
+      Cov.mat.chol <- object$Cov.mat.chol
       data <- object$data
       N <- length(object$data)
       coords <- object$coords
@@ -1088,14 +1091,15 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
       NS.cross.corr <- Scale.cross * Unscl.cross
       CrossCov <- diag(sqrt(pred.variance)) %*% NS.cross.corr %*%
         diag(sqrt(obs.variance))
+
+      crscov.Cinv <- t(backsolve(Cov.mat.chol,
+                                 backsolve(Cov.mat.chol, t(CrossCov), transpose = TRUE)))
+
       pred.means <- matrix(NA, M, p)
       for (i in 1:p) {
-        pred.means[, i] <- Xpred %*% beta.MLE + (CrossCov) %*%
-          Cov.mat.inv %*% (object$data[, i] - Xmat %*%
-                             beta.MLE)
+        pred.means[, i] <- Xpred %*% beta.MLE + crscov.Cinv %*% (object$data[, i] - Xmat %*% beta.MLE)
       }
-      pred.SDs <- sqrt((pred.variance + pred.nuggets) - diag((CrossCov) %*%
-                                                               Cov.mat.inv %*% t(CrossCov)))
+      pred.SDs <- sqrt((pred.variance + pred.nuggets) - diag(crscov.Cinv %*% t(CrossCov)))
       output <- list(pred.means = pred.means, pred.SDs = pred.SDs)
       return(output)
     }
@@ -1175,8 +1179,8 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
 #' listing the estimate, standard error, and t-value.}
 #' \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
 #' using all relevant parameter estimates.}
-#' \item{Cov.mat.inv}{Inverse of \code{Cov.mat}, the estimated covariance
-#' matrix (\code{N.obs} x \code{N.obs}).}
+#' \item{Cov.mat.chol}{Cholesky of \code{Cov.mat} (i.e., \code{chol(Cov.mat)}),
+#' the estimated covariance matrix (\code{N.obs} x \code{N.obs}).}
 #' \item{aniso.pars}{Vector of MLEs for the anisotropy parameters lam1,
 #' lam2, eta.}
 #' \item{aniso.mat}{2 x 2 anisotropy matrix, calculated from
@@ -1418,9 +1422,11 @@ Aniso_fit <- function( geodata = NULL, sp.SPDF = NULL,
   #===========================================================================
   # Calculate the GLS estimate of beta
   #===========================================================================
-  Data.Cov.inv <- solve(Data.Cov)
-  beta.cov <- chol2inv( chol(t(Xmat)%*%Data.Cov.inv%*%Xmat) )/p
-  beta.GLS <- (p*beta.cov %*% t(Xmat) %*% Data.Cov.inv %*% data %*% rep(1,p))/p
+  Data.Cov.chol <- chol(Data.Cov)
+
+  tX.Cinv <- t(backsolve(Data.Cov.chol, backsolve(Data.Cov.chol, Xmat, transpose = TRUE)))
+  beta.cov <- chol2inv( chol( tX.Cinv%*%Xmat) )/p
+  beta.GLS <- (p*beta.cov %*% tX.Cinv %*% data)/p
   Mean.coefs <- data.frame( Estimate = beta.GLS,
                             Std.Error = sqrt(diag(beta.cov)),
                             t.val = beta.GLS/sqrt(diag(beta.cov)) )
@@ -1435,7 +1441,7 @@ Aniso_fit <- function( geodata = NULL, sp.SPDF = NULL,
                   beta.cov = beta.cov,
                   Mean.coefs = Mean.coefs,
                   Cov.mat = Data.Cov,
-                  Cov.mat.inv = Data.Cov.inv,
+                  Cov.mat.chol = Data.Cov.chol,
                   aniso.pars =  MLE.pars[1:3],
                   aniso.mat = aniso.mat,
                   tausq.est = MLE.pars[4],
@@ -1501,7 +1507,7 @@ predict.Aniso <- function(object, pred.coords, pred.covariates = NULL,
       tausq.est <- object$tausq.est
       sigmasq.est <- object$sigmasq.est
       kappa.MLE <- object$kappa.MLE
-      Cov.mat.inv <- object$Cov.mat.inv
+      Cov.mat.chol <- object$Cov.mat.chol
       data <- object$data
       N <- length(object$data)
       coords <- object$coords
@@ -1520,15 +1526,17 @@ predict.Aniso <- function(object, pred.coords, pred.covariates = NULL,
                                        vc = aniso.mat)
       CrossCov <- sigmasq.est * cov.spatial(CC.distances, cov.model = cov.model,
                                             cov.pars = c(1, 1), kappa = kappa.MLE)
+      crscov.Cinv <- t(backsolve(Cov.mat.chol,
+                                 backsolve(Cov.mat.chol, t(CrossCov), transpose = TRUE)))
+
       pred.means <- matrix(NA, M, p)
       for (i in 1:p) {
-        pred.means[, i] <- Xpred %*% beta.MLE + ((CrossCov) %*%
-                                                   Cov.mat.inv %*% (object$data[, i] - Xmat %*%
-                                                                      beta.MLE))
+        pred.means[, i] <- Xpred %*% beta.MLE + crscov.Cinv %*% (object$data[, i] - Xmat %*% beta.MLE)
       }
-      pred.SDs <- sqrt(rep(tausq.est + sigmasq.est, M) - diag((CrossCov) %*%
-                                                                Cov.mat.inv %*% t(CrossCov)))
+      pred.SDs <- sqrt((pred.variance + pred.nuggets) - diag(crscov.Cinv %*% t(CrossCov)))
+
       output <- list(pred.means = pred.means, pred.SDs = pred.SDs)
-      return(output)    }
+      return(output)
+    }
   }
 }
