@@ -7,10 +7,10 @@
 NSconvo_fit(geodata = NULL, sp.SPDF = NULL, coords = geodata$coords,
   data = geodata$data, cov.model = "exponential", mean.model = data ~ 1,
   mc.locations = NULL, N.mc = NULL, lambda.w = NULL,
-  fixed.nugg2.var = NULL, mc.kernels = NULL, fit.radius = NULL,
-  ns.nugget = FALSE, ns.variance = FALSE, local.pars.LB = NULL,
-  local.pars.UB = NULL, global.pars.LB = NULL, global.pars.UB = NULL,
-  local.ini.pars = NULL, global.ini.pars = NULL)
+  fixed.nugg2.var = NULL, mean.model.df = NULL, mc.kernels = NULL,
+  fit.radius = NULL, ns.nugget = FALSE, ns.variance = FALSE,
+  local.pars.LB = NULL, local.pars.UB = NULL, global.pars.LB = NULL,
+  global.pars.UB = NULL, local.ini.pars = NULL, global.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -53,9 +53,16 @@ spatial domain.}
 Defaults to be the square of one-half of the minimum distance between
 mixture component locations.}
 
-\item{fixed.nugg2.var}{Avector of length N containing a station-specific
+\item{fixed.nugg2.var}{A vector of length N containing a station-specific
 fixed, known variance for a second nugget term (representing known
 measurement error). Defaults to zero.}
+
+\item{mean.model.df}{Optional data frame; refers to the variables used
+in \code{mean.model}. Important when using categorical variables in
+\code{mean.model}, as a subset of the full design matrix will likely
+be rank deficient. Specifying \code{mean.model.df} allows \code{NSconvo_fit}
+to calculate a design matrix specific to the points used to fit each
+local model.}
 
 \item{mc.kernels}{Optional specification of mixture component kernel
 matrices (based on expert opinion, etc.).}

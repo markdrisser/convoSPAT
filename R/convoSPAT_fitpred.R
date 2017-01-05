@@ -64,9 +64,15 @@
 #' @param lambda.w Scalar; tuning parameter for the weight function.
 #' Defaults to be the square of one-half of the minimum distance between
 #' mixture component locations.
-#' @param fixed.nugg2.var Avector of length N containing a station-specific
+#' @param fixed.nugg2.var A vector of length N containing a station-specific
 #' fixed, known variance for a second nugget term (representing known
 #' measurement error). Defaults to zero.
+#' @param mean.model.df Optional data frame; refers to the variables used
+#' in \code{mean.model}. Important when using categorical variables in
+#' \code{mean.model}, as a subset of the full design matrix will likely
+#' be rank deficient. Specifying \code{mean.model.df} allows \code{NSconvo_fit}
+#' to calculate a design matrix specific to the points used to fit each
+#' local model.
 #' @param mc.kernels Optional specification of mixture component kernel
 #' matrices (based on expert opinion, etc.).
 #' @param fit.radius Scalar; specifies the fit radius or neighborhood size
@@ -171,7 +177,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                          coords = geodata$coords, data = geodata$data,
                          cov.model = "exponential", mean.model = data ~ 1,
                          mc.locations = NULL, N.mc = NULL, lambda.w = NULL,
-                         fixed.nugg2.var = NULL,
+                         fixed.nugg2.var = NULL, mean.model.df = NULL,
                          mc.kernels = NULL, fit.radius = NULL,
                          ns.nugget = FALSE, ns.variance = FALSE,
                          local.pars.LB = NULL, local.pars.UB = NULL,
@@ -279,9 +285,14 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   #===========================================================================
   # Calculate the design matrix
   #===========================================================================
-  OLS.model <- lm( mean.model, x=TRUE )
-
-  Xmat <- matrix( unname( OLS.model$x ), nrow=N )
+  if( is.null(mean.model.df) == TRUE ){
+    OLS.model <- lm( mean.model, x=TRUE )
+    Xmat <- matrix( unname( OLS.model$x ), nrow=N )
+  }
+  if( is.null(mean.model.df) == FALSE ){
+    OLS.model <- lm( mean.model, x=TRUE, data = mean.model.df )
+    Xmat <- matrix( unname( OLS.model$x ), nrow=N )
+  }
 
   #===========================================================================
   # Specify lower, upper, and initial parameter values for optim()
@@ -405,29 +416,60 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     # completely specified by the kernel covariance matrix
     for( k in 1:K ){
 
-      temp.locs <- coords[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
-                           & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
-      temp.dat <- data[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
-                       & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
-      temp.n2.var <- fixed.nugg2.var[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
-                                     & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius)]
-      X.tem <- as.matrix(Xmat[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
-                               & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ])
 
-      # Isolate the data/locations to be used for calculating the local kernel
-      distances <- rep(NA,dim(temp.locs)[1])
+      if( is.null(mean.model.df) == TRUE ){
+        temp.locs <- coords[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
+                             & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
+        temp.dat <- data[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
+                         & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
+        temp.n2.var <- fixed.nugg2.var[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
+                                       & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius)]
+        X.tem <- as.matrix(Xmat[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
+                                 & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ])
 
-      for(i in 1:dim(temp.locs)[1]){
-        distances[i] <- sqrt(sum((temp.locs[i,] - mc.locations[k,])^2))
+        # Isolate the data/locations to be used for calculating the local kernel
+        distances <- rep(NA,dim(temp.locs)[1])
+
+        for(i in 1:dim(temp.locs)[1]){
+          distances[i] <- sqrt(sum((temp.locs[i,] - mc.locations[k,])^2))
+        }
+
+        temp.locations <- temp.locs[distances <= fit.radius,]
+        Xtemp <- X.tem[distances <= fit.radius,]
+        n.fit <- dim(temp.locations)[1]
+        temp.dat <- as.matrix( temp.dat, nrow=n.fit)
+        temp.data <- temp.dat[distances <= fit.radius,]
+        temp.data <- as.matrix(temp.data, nrow=n.fit)
+        temp.nugg2.var <- temp.n2.var[distances <= fit.radius]
       }
+      if( is.null(mean.model.df) == FALSE ){
+        temp.locs <- coords[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
+                             & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
+        temp.dat <- data[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
+                         & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
+        temp.n2.var <- fixed.nugg2.var[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
+                                       & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius)]
+        temp.mmdf <- mean.model.df[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
+                                    & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
 
-      temp.locations <- temp.locs[distances <= fit.radius,]
-      Xtemp <- X.tem[distances <= fit.radius,]
-      n.fit <- dim(temp.locations)[1]
-      temp.dat <- as.matrix( temp.dat, nrow=n.fit)
-      temp.data <- temp.dat[distances <= fit.radius,]
-      temp.data <- as.matrix(temp.data, nrow=n.fit)
-      temp.nugg2.var <- temp.n2.var[distances <= fit.radius]
+        # Isolate the data/locations to be used for calculating the local kernel
+        distances <- rep(NA,dim(temp.locs)[1])
+
+        for(i in 1:dim(temp.locs)[1]){
+          distances[i] <- sqrt(sum((temp.locs[i,] - mc.locations[k,])^2))
+        }
+
+        temp.locations <- temp.locs[distances <= fit.radius,]
+        n.fit <- dim(temp.locations)[1]
+        temp.dat <- as.matrix( temp.dat, nrow=n.fit)
+        temp.data <- temp.dat[distances <= fit.radius,]
+        temp.data <- as.matrix(temp.data, nrow=n.fit)
+        temp.nugg2.var <- temp.n2.var[distances <= fit.radius]
+        temp.mmdf <- temp.mmdf[distances <= fit.radius,]
+
+        # Set up the design matrix
+        Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
+      }
 
       if(k == 1){
         cat("Calculating the parameter set for:\n")
