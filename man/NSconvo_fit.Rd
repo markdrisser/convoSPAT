@@ -6,10 +6,11 @@
 \usage{
 NSconvo_fit(geodata = NULL, sp.SPDF = NULL, coords = geodata$coords,
   data = geodata$data, cov.model = "exponential", mean.model = data ~ 1,
-  mc.locations = NULL, N.mc = NULL, lambda.w = NULL, mc.kernels = NULL,
-  fit.radius = NULL, ns.nugget = FALSE, ns.variance = FALSE,
-  local.pars.LB = NULL, local.pars.UB = NULL, global.pars.LB = NULL,
-  global.pars.UB = NULL, local.ini.pars = NULL, global.ini.pars = NULL)
+  mc.locations = NULL, N.mc = NULL, lambda.w = NULL,
+  fixed.nugg2.var = NULL, mc.kernels = NULL, fit.radius = NULL,
+  ns.nugget = FALSE, ns.variance = FALSE, local.pars.LB = NULL,
+  local.pars.UB = NULL, global.pars.LB = NULL, global.pars.UB = NULL,
+  local.ini.pars = NULL, global.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -51,6 +52,10 @@ spatial domain.}
 \item{lambda.w}{Scalar; tuning parameter for the weight function.
 Defaults to be the square of one-half of the minimum distance between
 mixture component locations.}
+
+\item{fixed.nugg2.var}{Avector of length N containing a station-specific
+fixed, known variance for a second nugget term (representing known
+measurement error). Defaults to zero.}
 
 \item{mc.kernels}{Optional specification of mixture component kernel
 matrices (based on expert opinion, etc.).}
@@ -137,6 +142,8 @@ the estimated covariance matrix (\code{N.obs} x \code{N.obs}).}
 as spatially-varing (\code{TRUE}) or constant (\code{FALSE}).}
 \item{ns.variance}{Logical, indicating if the process variance was
 estimated as spatially-varying (\code{TRUE}) or constant (\code{FALSE}).}
+\item{fixed.nugg2.var}{Vector of length N with the fixed variance for
+the second (measurement error) nugget term (defaults to zero).}
 \item{coords}{N x 2 matrix of observation locations.}
 \item{global.loglik}{Scalar value of the maximized likelihood from the
 global optimization (if available).}

@@ -6,7 +6,8 @@
 \usage{
 Aniso_fit(geodata = NULL, sp.SPDF = NULL, coords = geodata$coords,
   data = geodata$data, cov.model = "exponential", mean.model = data ~ 1,
-  local.pars.LB = NULL, local.pars.UB = NULL, local.ini.pars = NULL)
+  fixed.nugg2.var = NULL, local.pars.LB = NULL, local.pars.UB = NULL,
+  local.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -38,6 +39,10 @@ details, see documentation for \code{\link[geoR]{cov.spatial}}.}
 
 \item{mean.model}{An object of class \code{\link[stats]{formula}},
 specifying the mean model to be used. Defaults to an intercept only.}
+
+\item{fixed.nugg2.var}{Avector of length N containing a station-specific
+fixed, known variance for a second nugget term (representing known
+measurement error). Defaults to zero.}
 
 \item{local.pars.LB, local.pars.UB}{Optional vectors of lower and upper
 bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
@@ -84,6 +89,8 @@ variance).}
 (process variance).}
 \item{kappa.MLE}{Scalar maximum likelihood estimate for kappa (when
 applicable).}
+\item{fixed.nugg2.var}{Vector of length N with the fixed variance for
+the second (measurement error) nugget term (defaults to zero).}
 \item{cov.model}{String; the correlation model used for estimation.}
 \item{coords}{N x 2 matrix of observation locations.}
 \item{global.loglik}{Scalar value of the maximized likelihood from the
