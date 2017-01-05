@@ -443,6 +443,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
         temp.nugg2.var <- temp.n2.var[distances <= fit.radius]
       }
       if( is.null(mean.model.df) == FALSE ){
+
         temp.locs <- coords[ abs(coords[,1]-mc.locations[k,1]) <= fit.radius
                              & (abs(coords[,2] - mc.locations[k,2]) <= fit.radius), ]
         temp.dat <- data[(abs(coords[,1] - mc.locations[k,1]) <= fit.radius)
@@ -468,7 +469,17 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
         temp.mmdf <- temp.mmdf[distances <= fit.radius,]
 
         # Set up the design matrix
-        Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
+        if( exists("MDR.override") == TRUE ){ # For a special case where there's a categorical covariate
+          if( length(unique(temp.mmdf$Bregion)) == 1 ){
+            Xtemp <- matrix( unname( lm( mu0 ~ elevation, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
+          }
+          else{
+            Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
+          }
+        }
+        if( exists("MDR.override") == FALSE ){
+          Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
+        }
       }
 
       if(k == 1){
