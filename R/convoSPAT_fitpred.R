@@ -470,12 +470,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
 
         # Set up the design matrix
         if( exists("MDR.override") == TRUE ){ # For a special case where there's a categorical covariate
-          if( length(unique(temp.mmdf$Bregion)) == 1 ){
-            Xtemp <- matrix( unname( lm( mu0 ~ elevation, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
-          }
-          else{
-            Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
-          }
+          Xtemp <- matrix( unname( lm( rnorm(n.fit) ~ elevation, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
         }
         if( exists("MDR.override") == FALSE ){
           Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
