@@ -1,8 +1,8 @@
 Package: convoSPAT
 Type: Package
 Title: Convolution-Based Nonstationary Spatial Modeling
-Version: 1.1.3
-Date: 2017-01-05
+Version: 1.1.4
+Date: 2017-01-09
 Authors@R: person("Mark D.", "Risser", email = "markdrisser@gmail.com",
     role = c("aut", "cre"))
 Description: Fits convolution-based nonstationary

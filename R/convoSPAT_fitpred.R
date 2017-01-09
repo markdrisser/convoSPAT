@@ -81,7 +81,8 @@
 #' be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).
 #' @param ns.variance Logical; indicates if the process variance (sigmasq)
 #' should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).
-#'
+#' @param ns.mean Logical; indicates if the mean coefficeints (beta)
+#' should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).
 #' @param local.pars.LB,local.pars.UB Optional vectors of lower and upper
 #' bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
 #' \code{\link[stats]{optim}} function for the local parameter estimation.
@@ -129,12 +130,18 @@
 #' \item{kernel.ellipses}{\code{N.obs} x 2 x 2 array, containing the kernel
 #' matrices corresponding to each of the simulated values.}
 #' \item{data}{Observed data values.}
-#' \item{beta.GLS}{Vector of generalized least squares estimates of beta,
-#' the mean coefficients.}
+#' \item{beta.GLS}{Generalized least squares estimates of beta,
+#' the mean coefficients. For \code{ns.mean = FALSE}, this is a vector
+#' (containing the global mean coefficients); for \code{ns.mean = TRUE},
+#' this is a matrix (one column for each mixture component location).}
 #' \item{beta.cov}{Covariance matrix of the generalized least squares
-#' estimate of beta.}
+#' estimate of beta. For \code{ns.mean = FALSE}, this is a matrix
+#' (containing the covariance of theglobal mean coefficients); for
+#' \code{ns.mean = TRUE}, this is an array (one matrix for each mixture
+#' component location).}
 #' \item{Mean.coefs}{"Regression table" for the mean coefficient estimates,
-#' listing the estimate, standard error, and t-value.}
+#' listing the estimate, standard error, and t-value (for \code{ns.mean =
+#' FALSE} only).}
 #' \item{tausq.est}{Estimate of tausq (nugget variance), either scalar (when
 #' \code{ns.nugget = "FALSE"}) or a vector of length N (when
 #' \code{ns.nugget = "TRUE"}), which contains the estimated nugget variance
@@ -143,6 +150,10 @@
 #' (when \code{ns.variance = "FALSE"}) or a vector of length N (when
 #' \code{ns.variance = "TRUE"}), which contains the estimated process
 #' variance for each observation location.}
+#' \item{beta.est}{Estimate of beta (mean coefficients), either a vector
+#' (when \code{ns.mean = "FALSE"}) or a matrix with N rows (when
+#' \code{ns.mean = "TRUE"}), each row of which contains the estimated
+#' (smoothed) mean coefficients for each observation location.}
 #' \item{kappa.MLE}{Scalar maximum likelihood estimate for kappa (when
 #' applicable).}
 #' \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
@@ -180,6 +191,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                          fixed.nugg2.var = NULL, mean.model.df = NULL,
                          mc.kernels = NULL, fit.radius = NULL,
                          ns.nugget = FALSE, ns.variance = FALSE,
+                         ns.mean = FALSE,
                          local.pars.LB = NULL, local.pars.UB = NULL,
                          global.pars.LB = NULL, global.pars.UB = NULL,
                          local.ini.pars = NULL, global.ini.pars = NULL ){
@@ -190,14 +202,14 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   #===========================================================================
   if( is.null(geodata) == FALSE ){
     if( class(geodata) != "geodata" ){
-      cat("\nPlease use a geodata object for the 'geodata = ' input.\n")
+      stop("Please use a geodata object for the 'geodata = ' input.")
     }
     coords <- geodata$coords
     data <- geodata$data
   }
   if( is.null(sp.SPDF) == FALSE ){
     if( class(sp.SPDF) != "SpatialPointsDataFrame" ){
-      cat("\nPlease use a SpatialPointsDataFrame object for the 'sp.SPDF = ' input.\n")
+      stop("Please use a SpatialPointsDataFrame object for the 'sp.SPDF = ' input.")
     }
     geodata <- geoR::as.geodata( sp.SPDF )
     coords <- geodata$coords
@@ -213,8 +225,18 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   if( cov.model != "cauchy" & cov.model != "matern" & cov.model != "circular" &
         cov.model != "cubic" & cov.model != "gaussian" & cov.model != "exponential" &
         cov.model != "spherical" & cov.model != "wave" ){
-    cat("\nPlease specify a valid covariance model (cauchy, matern,\ncircular, cubic, gaussian,
-          exponential, spherical, or wave).\n")
+    stop("Please specify a valid covariance model (cauchy, matern,\ncircular, cubic, gaussian,
+          exponential, spherical, or wave).")
+  }
+
+  # Check that ns.mean = TRUE is only used where applicable
+  if( ns.mean == TRUE ){
+    if( ns.nugget == FALSE || ns.variance == FALSE ){
+      stop("Cannot use ns.mean = TRUE and either ns.nugget = FALSE or ns.variance = FALSE (currently unsupported).")
+    }
+    if( cov.model == "matern" || cov.model == "cauchy" ){
+      stop("Cannot use ns.mean = TRUE with cov.model = `matern` or `cauchy` (currently unsupported).")
+    }
   }
 
   #===========================================================================
@@ -250,23 +272,23 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   # Check the mixture component locations
   #===========================================================================
   check.mc.locs <- mc_N( coords, mc.locations, fit.radius )
-  cat("\n-------------------------------------------------------\n")
+  cat("\n-----------------------------------------------------------\n")
   cat(paste("Fitting the nonstationary model: ", K, " local models with\nlocal sample sizes ranging between ", min(check.mc.locs),
             " and ", max(check.mc.locs), ".", sep = "" ))
   if( ns.nugget == FALSE & ns.variance == FALSE ){
     cat("\nConstant nugget and constant variance.")
   }
   if( ns.nugget == FALSE & ns.variance == TRUE ){
-    cat("\nConstant nugget and spatially-varing variance.")
+    cat("\nConstant nugget and spatially-varying variance.")
   }
   if( ns.nugget == TRUE & ns.variance == FALSE ){
-    cat("\nSpatially-varing nugget and constant variance.")
+    cat("\nSpatially-varying nugget and constant variance.")
   }
   if( ns.nugget == TRUE & ns.variance == TRUE ){
-    cat("\nSpatially-varing nugget and spatially-varing variance.")
+    cat("\nSpatially-varying nugget and spatially-varying variance.")
   }
   if( min(check.mc.locs) < 5 ){cat("\nWARNING: at least one of the mc locations has too few data points.\n")}
-  cat("\n-------------------------------------------------------\n")
+  cat("\n-----------------------------------------------------------\n")
 
   #===========================================================================
   # Set the tuning parameter, if not specified
@@ -288,10 +310,12 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   if( is.null(mean.model.df) == TRUE ){
     OLS.model <- lm( mean.model, x=TRUE )
     Xmat <- matrix( unname( OLS.model$x ), nrow=N )
+    beta.names <- colnames(OLS.model$x)
   }
   if( is.null(mean.model.df) == FALSE ){
     OLS.model <- lm( mean.model, x=TRUE, data = mean.model.df )
     Xmat <- matrix( unname( OLS.model$x ), nrow=N )
+    beta.names <- colnames(OLS.model$x)
   }
 
   #===========================================================================
@@ -409,8 +433,11 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   if( is.null(mc.kernels) == TRUE ){
 
     # Storage for the mixture component kernels
-    mc.kernels <- array(NA, dim=c(2,2,K))
-    MLEs.save <- matrix(NA,K,7)
+    mc.kernels <- array(NA, dim=c(2, 2, K))
+    MLEs.save <- matrix(NA, K, 7)
+    beta.GLS.save <- matrix(NA, K, ncol(Xmat))
+    beta.cov.save <- array(NA, dim = c(ncol(Xmat), ncol(Xmat), K))
+    beta.coefs.save <- list()
 
     # Estimate the kernel function for each mixture component location,
     # completely specified by the kernel covariance matrix
@@ -467,14 +494,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
         temp.data <- as.matrix(temp.data, nrow=n.fit)
         temp.nugg2.var <- temp.n2.var[distances <= fit.radius]
         temp.mmdf <- temp.mmdf[distances <= fit.radius,]
-
-        # Set up the design matrix
-        if( exists("MDR.override") == TRUE ){ # For a special case where there's a categorical covariate
-          Xtemp <- matrix( unname( lm( rnorm(n.fit) ~ elevation, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
-        }
-        if( exists("MDR.override") == FALSE ){
-          Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
-        }
+        Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
       }
 
       if(k == 1){
@@ -547,6 +567,24 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
       # Save the kernel matrix
       mc.kernels[,,k] <- kernel_cov( MLE.pars[1:3] )
 
+      # Calculate spatially-varying mean coefficients if needed
+      if( ns.mean ){
+        dist.k <- mahalanobis.dist( data.x = temp.locations, vc = mc.kernels[,,k] )
+        NS.cov.k <- MLE.pars[5]*cov.spatial(dist.k, cov.model = cov.model,
+                                      cov.pars = c(1,1), kappa = MLE.pars[6])
+        Data.cov.k <- NS.cov.k + diag(rep(MLE.pars[4],n.fit) + temp.nugg2.var)
+        Data.chol.k <- chol(Data.cov.k)
+        tX.Cinv.k <- t(backsolve(Data.chol.k, backsolve(Data.chol.k, Xtemp, transpose = TRUE)))
+        beta.cov.k <- chol2inv( chol( tX.Cinv.k%*%Xtemp) )/p
+        beta.GLS.k <- (p*beta.cov.k %*% tX.Cinv.k %*% temp.data)/p
+
+        beta.GLS.save[k,] <- beta.GLS.k
+        beta.cov.save[,,k] <- beta.cov.k
+        beta.coefs.save[[k]] <- data.frame( Estimate = beta.GLS.k,
+                                            Std.Error = sqrt(diag(beta.cov.k)),
+                                            t.val = beta.GLS.k/sqrt(diag(beta.cov.k)) )
+      }
+
       # Save all MLEs
       # Parameter order: n, lam1, lam2, eta, tausq, sigmasq, mu, kappa
       MLEs.save[k,] <- c( n.fit, MLE.pars )
@@ -564,8 +602,8 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
   for(n in 1:N){for(k in 1:K){
     weights[n,k] <- exp(-sum((coords[n,] - mc.locations[k,])^2)/(2*lambda.w))
   }
-                # Normalize the weights
-                weights[n,] <- weights[n,]/sum(weights[n,])
+    # Normalize the weights
+    weights[n,] <- weights[n,]/sum(weights[n,])
   }
 
   #===========================================================================
@@ -597,6 +635,17 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     for(n in 1:N){
       for(k in 1:K){
         obs.variance[n] <- obs.variance[n] + weights[n,k]*mc.variance[k]
+      }
+    }
+  }
+
+  if( ns.mean == TRUE ){
+    obs.beta <- matrix(0, N, ncol(Xmat))
+    for( t in 1:ncol(Xmat)){
+      for(n in 1:N){
+        for(k in 1:K){
+          obs.beta[n,t] <- obs.beta[n,t] + weights[n,k]*beta.GLS.save[k,t]
+        }
       }
     }
   }
@@ -652,7 +701,6 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
 
     #====================================
     # Global parameter estimation
-
     if( ns.nugget == FALSE & ns.variance == FALSE ){
       cat("Calculating the variance parameter MLEs. \n")
 
@@ -955,13 +1003,19 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
 
   # Data.Cov.inv <- solve(Data.Cov)
   Data.Cov.chol <- chol(Data.Cov)
-
-  tX.Cinv <- t(backsolve(Data.Cov.chol, backsolve(Data.Cov.chol, Xmat, transpose = TRUE)))
-  beta.cov <- chol2inv( chol( tX.Cinv%*%Xmat) )/p
-  beta.GLS <- (p*beta.cov %*% tX.Cinv %*% data)/p
-  Mean.coefs <- data.frame( Estimate = beta.GLS,
-                            Std.Error = sqrt(diag(beta.cov)),
-                            t.val = beta.GLS/sqrt(diag(beta.cov)) )
+  if( ns.mean == FALSE ){
+    tX.Cinv <- t(backsolve(Data.Cov.chol, backsolve(Data.Cov.chol, Xmat, transpose = TRUE)))
+    beta.cov <- chol2inv( chol( tX.Cinv%*%Xmat) )/p
+    beta.GLS <- (p*beta.cov %*% tX.Cinv %*% data)/p
+    Mean.coefs <- data.frame( Estimate = beta.GLS,
+                              Std.Error = sqrt(diag(beta.cov)),
+                              t.val = beta.GLS/sqrt(diag(beta.cov)) )
+  }
+  if( ns.mean == TRUE ){
+    beta.cov <- beta.cov.save
+    beta.GLS <- beta.GLS.save
+    Mean.coefs <- beta.coefs.save
+  }
 
   #===========================================================================
   # Output
@@ -980,6 +1034,14 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     sigmasq.out <- sigmasq.MLE
   }
 
+  if( ns.mean == TRUE ){
+    beta.out <- obs.beta
+    names(beta.out) <- beta.names
+  }
+  if( ns.mean == FALSE ){
+    beta.out <- beta.GLS
+  }
+
   output <- list( mc.kernels = mc.kernels,
                   mc.locations = mc.locations,
                   MLEs.save = MLEs.save,
@@ -990,12 +1052,14 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                   Mean.coefs = Mean.coefs,
                   tausq.est = tausq.out,
                   sigmasq.est = sigmasq.out,
+                  beta.est = beta.out,
                   kappa.MLE = kappa.MLE,
                   Cov.mat = Data.Cov,
                   Cov.mat.chol = Data.Cov.chol,
                   cov.model = cov.model,
                   ns.nugget = ns.nugget,
                   ns.variance = ns.variance,
+                  ns.mean = ns.mean,
                   fixed.nugg2.var = fixed.nugg2.var,
                   coords = coords,
                   global.loglik = global.lik,
@@ -1062,7 +1126,9 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
       kernel.ellipses <- object$kernel.ellipses
       ns.nugget <- object$ns.nugget
       ns.variance <- object$ns.variance
+      ns.mean <- object$ns.mean
       beta.MLE <- as.matrix(object$beta.GLS)
+      beta.est <- object$beta.est
       tausq.est <- object$tausq.est
       sigmasq.est <- object$sigmasq.est
       kappa.MLE <- object$kappa.MLE
@@ -1126,6 +1192,18 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
         obs.variance <- rep(sigmasq.est, N)
         pred.variance <- rep(sigmasq.est, M)
       }
+
+      if( ns.mean == TRUE ){
+        pred.beta <- matrix(0, M, ncol(Xmat))
+        for( t in 1:ncol(Xmat)){
+          for(m in 1:M){
+            for(k in 1:K){
+              pred.beta[m,t] <- pred.beta[m,t] + pred.weights[m,k]*beta.MLE[k,t]
+            }
+          }
+        }
+      }
+
       cat("Calculating the cross-correlations. (This step can be time consuming, depending on the number of prediction locations.)")
       Scale.cross <- matrix(NA, M, N)
       Dist.cross <- matrix(NA, M, N)
@@ -1163,9 +1241,23 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL,
                                  backsolve(Cov.mat.chol, t(CrossCov), transpose = TRUE)))
 
       pred.means <- matrix(NA, M, p)
-      for (i in 1:p) {
-        pred.means[, i] <- Xpred %*% beta.MLE + crscov.Cinv %*% (object$data[, i] - Xmat %*% beta.MLE)
+      if( ns.mean == FALSE ){
+        for (i in 1:p) {
+          pred.means[, i] <- Xpred %*% beta.MLE + crscov.Cinv %*% (object$data[, i] - Xmat %*% beta.MLE)
+        }
       }
+      if( ns.mean == TRUE ){
+        pred.Xbeta.hat <- rep(0,M)
+        obs.Xbeta.hat <- rep(0,N)
+        for( t in 1:ncol(Xmat) ){
+          pred.Xbeta.hat <- pred.Xbeta.hat + Xpred[,t]*pred.beta[,t]
+          obs.Xbeta.hat <- obs.Xbeta.hat + Xmat[,t]*beta.est[,t]
+        }
+        for (i in 1:p) {
+          pred.means[, i] <- pred.Xbeta.hat + crscov.Cinv %*% (object$data[, i] - obs.Xbeta.hat)
+        }
+      }
+
       pred.SDs <- sqrt((pred.variance + pred.nuggets) - diag(crscov.Cinv %*% t(CrossCov)))
       output <- list(pred.means = pred.means, pred.SDs = pred.SDs)
       return(output)

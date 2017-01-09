@@ -9,8 +9,9 @@ NSconvo_fit(geodata = NULL, sp.SPDF = NULL, coords = geodata$coords,
   mc.locations = NULL, N.mc = NULL, lambda.w = NULL,
   fixed.nugg2.var = NULL, mean.model.df = NULL, mc.kernels = NULL,
   fit.radius = NULL, ns.nugget = FALSE, ns.variance = FALSE,
-  local.pars.LB = NULL, local.pars.UB = NULL, global.pars.LB = NULL,
-  global.pars.UB = NULL, local.ini.pars = NULL, global.ini.pars = NULL)
+  ns.mean = FALSE, local.pars.LB = NULL, local.pars.UB = NULL,
+  global.pars.LB = NULL, global.pars.UB = NULL, local.ini.pars = NULL,
+  global.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -76,6 +77,9 @@ be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).}
 \item{ns.variance}{Logical; indicates if the process variance (sigmasq)
 should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).}
 
+\item{ns.mean}{Logical; indicates if the mean coefficeints (beta)
+should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).}
+
 \item{local.pars.LB, local.pars.UB}{Optional vectors of lower and upper
 bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
 \code{\link[stats]{optim}} function for the local parameter estimation.
@@ -124,12 +128,18 @@ mixture component location.}
 \item{kernel.ellipses}{\code{N.obs} x 2 x 2 array, containing the kernel
 matrices corresponding to each of the simulated values.}
 \item{data}{Observed data values.}
-\item{beta.GLS}{Vector of generalized least squares estimates of beta,
-the mean coefficients.}
+\item{beta.GLS}{Generalized least squares estimates of beta,
+the mean coefficients. For \code{ns.mean = FALSE}, this is a vector
+(containing the global mean coefficients); for \code{ns.mean = TRUE},
+this is a matrix (one column for each mixture component location).}
 \item{beta.cov}{Covariance matrix of the generalized least squares
-estimate of beta.}
+estimate of beta. For \code{ns.mean = FALSE}, this is a matrix
+(containing the covariance of theglobal mean coefficients); for
+\code{ns.mean = TRUE}, this is an array (one matrix for each mixture
+component location).}
 \item{Mean.coefs}{"Regression table" for the mean coefficient estimates,
-listing the estimate, standard error, and t-value.}
+listing the estimate, standard error, and t-value (for \code{ns.mean =
+FALSE} only).}
 \item{tausq.est}{Estimate of tausq (nugget variance), either scalar (when
 \code{ns.nugget = "FALSE"}) or a vector of length N (when
 \code{ns.nugget = "TRUE"}), which contains the estimated nugget variance
@@ -138,6 +148,10 @@ for each observation location.}
 (when \code{ns.variance = "FALSE"}) or a vector of length N (when
 \code{ns.variance = "TRUE"}), which contains the estimated process
 variance for each observation location.}
+\item{beta.est}{Estimate of beta (mean coefficients), either a vector
+(when \code{ns.mean = "FALSE"}) or a matrix with N rows (when
+\code{ns.mean = "TRUE"}), each row of which contains the estimated
+(smoothed) mean coefficients for each observation location.}
 \item{kappa.MLE}{Scalar maximum likelihood estimate for kappa (when
 applicable).}
 \item{Cov.mat}{Estimated covariance matrix (\code{N.obs} x \code{N.obs})
