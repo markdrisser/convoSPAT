@@ -83,6 +83,8 @@
 #' should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).
 #' @param ns.mean Logical; indicates if the mean coefficeints (beta)
 #' should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).
+#' @param print.progress Logical; if \code{TRUE}, text indicating the progress
+#' of local model fitting in real time.
 #' @param local.pars.LB,local.pars.UB Optional vectors of lower and upper
 #' bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
 #' \code{\link[stats]{optim}} function for the local parameter estimation.
@@ -191,7 +193,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                          fixed.nugg2.var = NULL, mean.model.df = NULL,
                          mc.kernels = NULL, fit.radius = NULL,
                          ns.nugget = FALSE, ns.variance = FALSE,
-                         ns.mean = FALSE,
+                         ns.mean = FALSE, print.progress = TRUE,
                          local.pars.LB = NULL, local.pars.UB = NULL,
                          global.pars.LB = NULL, global.pars.UB = NULL,
                          local.ini.pars = NULL, global.ini.pars = NULL ){
@@ -497,10 +499,12 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
         Xtemp <- matrix( unname( lm( mean.model, x=TRUE, data = temp.mmdf )$x ), nrow=n.fit )
       }
 
-      if(k == 1){
-        cat("Calculating the parameter set for:\n")
+      if( print.progress ){
+        if(k == 1){
+          cat("Calculating the parameter set for:\n")
+        }
+        cat("mixture component location ", k,", using ", n.fit," observations...\n", sep="")
       }
-      cat("mixture component location ", k,", using ", n.fit," observations...\n", sep="")
 
       # Covariance models with the kappa parameter
       if( cov.model == "matern" || cov.model == "cauchy" ){
@@ -520,14 +524,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                        lower=c( lam1.LB, lam2.LB, 0, tausq.local.LB, sigmasq.local.LB ),
                        upper=c( lam1.UB, lam2.UB, pi/2,
                                 tausq.local.UB, sigmasq.local.UB, kappa.local.UB ) )
-        if( MLEs$convergence != 0 ){
-          if( MLEs$convergence == 52 ){
-            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                       MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
-          }
-          else{
-            cat( paste("  There was an error with optim(): \n  ",
-                       MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
+        if(print.progress){
+          if( MLEs$convergence != 0 ){
+            if( MLEs$convergence == 52 ){
+              cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                         MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
+            }
+            else{
+              cat( paste("  There was an error with optim(): \n  ",
+                         MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
+            }
           }
         }
         MLE.pars <- MLEs$par
@@ -550,14 +556,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                        lower=c( lam1.LB, lam2.LB, 0, tausq.local.LB, sigmasq.local.LB ),
                        upper=c( lam1.UB, lam2.UB, pi/2,
                                 tausq.local.UB, sigmasq.local.UB ) )
-        if( MLEs$convergence != 0 ){
-          if( MLEs$convergence == 52 ){
-            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                       MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
-          }
-          else{
-            cat( paste("  There was an error with optim(): \n  ",
-                       MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
+        if(print.progress){
+          if( MLEs$convergence != 0 ){
+            if( MLEs$convergence == 52 ){
+              cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                         MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
+            }
+            else{
+              cat( paste("  There was an error with optim(): \n  ",
+                         MLEs$convergence, "  ", MLEs$message, "\n", sep = "") )
+            }
           }
         }
 
@@ -702,7 +710,10 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     #====================================
     # Global parameter estimation
     if( ns.nugget == FALSE & ns.variance == FALSE ){
-      cat("Calculating the variance parameter MLEs. \n")
+
+      if(print.progress){
+        cat("Calculating the variance parameter MLEs. \n")
+      }
 
       overall.lik1 <- make_global_loglik1( data = data, Xmat = Xmat,
                                            Corr = NS.corr,
@@ -714,14 +725,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                              lower=c( tausq.global.LB, sigmasq.global.LB ),
                              upper=c( tausq.global.UB, sigmasq.global.UB ) )
 
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
 
@@ -737,7 +750,9 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     }
 
     if( ns.nugget == TRUE & ns.variance == FALSE ){
-      cat("Calculating the variance parameter MLEs. \n")
+      if(print.progress){
+        cat("Calculating the variance parameter MLEs. \n")
+      }
 
       overall.lik2 <- make_global_loglik2( data = data,
                                            Xmat = Xmat,
@@ -747,14 +762,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
       overall.MLEs <- optim( sigmasq.global.init, overall.lik2, method = "L-BFGS-B",
                              lower=c( sigmasq.global.LB ),
                              upper=c( sigmasq.global.UB ) )
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
       sigmasq.MLE <- overall.MLEs$par[1]
@@ -768,7 +785,9 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     }
 
     if( ns.nugget == FALSE & ns.variance == TRUE ){
-      cat("Calculating the variance parameter MLEs. \n")
+      if(print.progress){
+        cat("Calculating the variance parameter MLEs. \n")
+      }
 
       overall.lik3 <- make_global_loglik3( data = data,
                                            Xmat = Xmat,
@@ -780,14 +799,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                              lower=c( tausq.global.LB ),
                              upper=c( tausq.global.UB ) )
 
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
       tausq.MLE <- overall.MLEs$par[1]
@@ -856,7 +877,9 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     # Global parameter estimation
 
     if( ns.nugget == FALSE & ns.variance == FALSE ){
-      cat("Calculating the variance and smoothness parameter MLEs. \n")
+      if(print.progress){
+        cat("Calculating the variance and smoothness parameter MLEs. \n")
+      }
 
       overall.lik1.kappa <- make_global_loglik1_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -869,14 +892,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                             method = "L-BFGS-B",
                             lower=c( tausq.global.LB, sigmasq.global.LB, kappa.global.LB ),
                             upper=c( tausq.global.UB, sigmasq.global.UB, kappa.global.UB ) )
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
       tausq.MLE <- overall.MLEs$par[1]
@@ -891,7 +916,9 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     }
 
     if( ns.nugget == TRUE & ns.variance == FALSE ){
-      cat("Calculating the variance and smoothness parameter MLEs. \n")
+      if(print.progress){
+        cat("Calculating the variance and smoothness parameter MLEs. \n")
+      }
 
       overall.lik2.kappa <- make_global_loglik2_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -904,14 +931,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                             method = "L-BFGS-B",
                             lower=c( sigmasq.global.LB, kappa.global.LB ),
                             upper=c( sigmasq.global.UB, kappa.global.UB ) )
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
       sigmasq.MLE <- overall.MLEs$par[1]
@@ -927,7 +956,9 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     }
 
     if( ns.nugget == FALSE & ns.variance == TRUE ){
-      cat("Calculating the variance and smoothness parameter MLEs. \n")
+      if(print.progress){
+        cat("Calculating the variance and smoothness parameter MLEs. \n")
+      }
 
       overall.lik3.kappa <- make_global_loglik3_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -941,14 +972,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
                             method = "L-BFGS-B",
                             lower=c( tausq.global.LB, kappa.global.LB ),
                             upper=c( tausq.global.UB, kappa.global.UB ) )
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
       tausq.MLE <- overall.MLEs$par[1]
@@ -962,7 +995,9 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
     }
 
     if( ns.nugget == TRUE & ns.variance == TRUE ){
-      cat("Calculating the smoothness parameter MLEs. \n")
+      if(print.progress){
+        cat("Calculating the smoothness parameter MLE. \n")
+      }
 
       overall.lik4.kappa <- make_global_loglik4_kappa( data = data, Xmat = Xmat,
                                                        cov.model = cov.model,
@@ -974,14 +1009,16 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
       overall.MLEs <- optim( kappa.global.init, overall.lik4.kappa, method = "L-BFGS-B",
                              lower=c( kappa.global.LB ),
                              upper=c( kappa.global.UB ) )
-      if( overall.MLEs$convergence != 0 ){
-        if( overall.MLEs$convergence == 52 ){
-          cat( paste("  There was a NON-FATAL error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
-        }
-        else{
-          cat( paste("  There was an error with optim(): \n  ",
-                     overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+      if(print.progress){
+        if( overall.MLEs$convergence != 0 ){
+          if( overall.MLEs$convergence == 52 ){
+            cat( paste("  There was a NON-FATAL error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
+          else{
+            cat( paste("  There was an error with optim(): \n  ",
+                       overall.MLEs$convergence, "  ", overall.MLEs$message, "\n", sep = "") )
+          }
         }
       }
 

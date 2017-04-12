@@ -9,9 +9,9 @@ NSconvo_fit(geodata = NULL, sp.SPDF = NULL, coords = geodata$coords,
   mc.locations = NULL, N.mc = NULL, lambda.w = NULL,
   fixed.nugg2.var = NULL, mean.model.df = NULL, mc.kernels = NULL,
   fit.radius = NULL, ns.nugget = FALSE, ns.variance = FALSE,
-  ns.mean = FALSE, local.pars.LB = NULL, local.pars.UB = NULL,
-  global.pars.LB = NULL, global.pars.UB = NULL, local.ini.pars = NULL,
-  global.ini.pars = NULL)
+  ns.mean = FALSE, print.progress = TRUE, local.pars.LB = NULL,
+  local.pars.UB = NULL, global.pars.LB = NULL, global.pars.UB = NULL,
+  local.ini.pars = NULL, global.ini.pars = NULL)
 }
 \arguments{
 \item{geodata}{A list containing elements \code{coords} and \code{data} as
@@ -79,6 +79,9 @@ should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).}
 
 \item{ns.mean}{Logical; indicates if the mean coefficeints (beta)
 should be spatially-varying (\code{TRUE}) or constant (\code{FALSE}).}
+
+\item{print.progress}{Logical; if \code{TRUE}, text indicating the progress
+of local model fitting in real time.}
 
 \item{local.pars.LB, local.pars.UB}{Optional vectors of lower and upper
 bounds, respectively, used by the \code{"L-BFGS-B"} method option in the
