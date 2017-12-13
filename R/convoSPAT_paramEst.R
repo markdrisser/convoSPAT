@@ -660,26 +660,33 @@ make_local_lik <- function( locations, cov.model, data, Xmat,
     distances <- mahalanobis.dist(data.x = locations, vc = Sigma)
     NS.cov <- nugg2.var + tausq * diag(N) + sigmasq * cov.spatial(distances, cov.model = cov.model,
                                                                         cov.pars = c(1, 1), kappa = kappa)
-    cov.chol <- chol(NS.cov)
 
-    # Likelihood calculation
-    if( method == "ml" ){
-      tmp1 <- backsolve(cov.chol, data - Xmat %*% beta, transpose = TRUE)
-      ResCinvRes <- t(tmp1) %*% tmp1
-      loglikelihood <- m * sum(log(diag(cov.chol))) + 0.5 * sum(diag(ResCinvRes))
+    possibleError <- tryCatch(
+      cov.chol <- chol(NS.cov),
+      error=function(e) e
+    )
+    # Check for error before calculating the likelihood
+    if(inherits(possibleError, "error")){
+      loglikelihood <- 1e+06
+    } else{
+      # Likelihood calculation
+      if( method == "ml" ){
+        tmp1 <- backsolve(cov.chol, data - Xmat %*% beta, transpose = TRUE)
+        ResCinvRes <- t(tmp1) %*% tmp1
+        loglikelihood <- m * sum(log(diag(cov.chol))) + 0.5 * sum(diag(ResCinvRes))
+      }
+      if( method == "reml" ){
+        tmp1 <- backsolve(cov.chol, Xmat, transpose = TRUE)
+        XCinvX <- t(tmp1) %*% tmp1
+        xcx.chol <- chol(XCinvX)
+        tmp2 <- backsolve(cov.chol, data, transpose = TRUE)
+        ZCinvZ <- t(tmp2) %*% tmp2
+        XCinvZ <- t(Xmat) %*% backsolve(cov.chol, tmp2)
+        tmp3 <- backsolve(xcx.chol, XCinvZ, transpose = TRUE)
+        qf <- t(tmp3) %*% tmp3
+        loglikelihood <- m * sum(log(diag(cov.chol))) + m * sum(log(diag(xcx.chol))) + 0.5 * sum(diag(ZCinvZ)) - 0.5 * sum(diag(qf))
+      }
     }
-    if( method == "reml" ){
-      tmp1 <- backsolve(cov.chol, Xmat, transpose = TRUE)
-      XCinvX <- t(tmp1) %*% tmp1
-      xcx.chol <- chol(XCinvX)
-      tmp2 <- backsolve(cov.chol, data, transpose = TRUE)
-      ZCinvZ <- t(tmp2) %*% tmp2
-      XCinvZ <- t(Xmat) %*% backsolve(cov.chol, tmp2)
-      tmp3 <- backsolve(xcx.chol, XCinvZ, transpose = TRUE)
-      qf <- t(tmp3) %*% tmp3
-      loglikelihood <- m * sum(log(diag(cov.chol))) + m * sum(log(diag(xcx.chol))) + 0.5 * sum(diag(ZCinvZ)) - 0.5 * sum(diag(qf))
-    }
-
     if (abs(loglikelihood) == Inf) { loglikelihood <- 1e+06 } # Make sure not Inf
     return(loglikelihood)
   }
