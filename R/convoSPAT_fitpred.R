@@ -990,11 +990,7 @@ NSconvo_fit <- function( geodata = NULL, sp.SPDF = NULL,
 
   if( ns.mean == TRUE ){
     obs.beta <- NULL
-<<<<<<< HEAD
     for(t in 1:ncol(beta.GLS.save)){
-=======
-    for(t in 1:ncol(betaGLS_mat)){
->>>>>>> e8bd47f491cedf793364c92e15ebe98c53155873
       obs.beta <- cbind(obs.beta, rowSums( t(t(weights)*beta.GLS.save[,t]) ))
     }
   }
@@ -1563,11 +1559,7 @@ predict.NSconvo <- function(object, pred.coords, pred.covariates = NULL, pred.fi
 
   if( ns.mean == TRUE ){
     pred.beta <- NULL
-<<<<<<< HEAD
     for(t in 1:ncol(beta.MLE)){
-=======
-    for(t in 1:ncol(betaGLS_mat)){
->>>>>>> e8bd47f491cedf793364c92e15ebe98c53155873
       pred.beta <- cbind(pred.beta, rowSums( t(t(pred.weights)*beta.MLE[,t]) ))
     }
   }
